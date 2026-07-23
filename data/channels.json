@@ -1,0 +1,382 @@
+[
+  {
+    "id": "news-pinch",
+    "name": "News Pinch",
+    "handle": "@TheNewsPinch",
+    "channelId": "UCURG8Jv8fpoI_yoK5AAbMMQ",
+    "youtubeUrl": "https://www.youtube.com/@TheNewsPinch",
+    "founder": "Abhinav Pandey",
+    "blurb": "Ground-up Hindi reporting from the Hindi heartland — street stories without the studio spin.",
+    "language": "Hindi",
+    "focus": "Ground report",
+    "subscribersLabel": "1.5M+",
+    "tags": [
+      "Hindi belt",
+      "UP",
+      "Bihar",
+      "Street report",
+      "Politics"
+    ],
+    "sampleVideos": [
+      {
+        "id": "IOFISiEvGu0",
+        "title": "NSUI, Rahul Gandhi ने देर की? Nirmal Chaudhary ने क्या जवाब दिया?"
+      },
+      {
+        "id": "ru6FRGDFj2o",
+        "title": "Ravindra Bhati Jantar Mantar पर Anti National वाली बात पर क्या बोले?"
+      }
+    ]
+  },
+  {
+    "id": "jist",
+    "name": "Jist News",
+    "handle": "@jistnews",
+    "channelId": "UC6JEz6BKg7hX7idKecN7QYA",
+    "youtubeUrl": "https://www.youtube.com/@jistnews",
+    "founder": "Jist Media",
+    "blurb": "Independent digital news from Noida — ground reports, vox pops, and daily breakdowns without corporate backing.",
+    "language": "Both",
+    "focus": "Ground report",
+    "subscribersLabel": "Growing",
+    "tags": [
+      "Delhi-NCR",
+      "Vox pop",
+      "Elections",
+      "Ground"
+    ],
+    "sampleVideos": [
+      {
+        "id": "1wO9XA1TfzM",
+        "title": "PM Modi Addresses Nation on paper leak and cabinet action"
+      },
+      {
+        "id": "OjOnCtLHDoc",
+        "title": "Goons or Protesters? Jantar Mantar Protest Turns Ugly"
+      }
+    ]
+  },
+  {
+    "id": "ravish-kumar",
+    "name": "Ravish Kumar",
+    "handle": "@ravishkumar.official",
+    "channelId": "UC0yXUUIaPVAqZLgRjvtMftw",
+    "youtubeUrl": "https://www.youtube.com/@ravishkumar.official",
+    "founder": "Ravish Kumar",
+    "blurb": "Veteran journalist’s independent channel — sharp analysis, media critique, and public-interest storytelling.",
+    "language": "Hindi",
+    "focus": "Analysis",
+    "subscribersLabel": "14M+",
+    "tags": [
+      "Media critique",
+      "Politics",
+      "Public interest",
+      "Hindi"
+    ],
+    "sampleVideos": [
+      {
+        "id": "z8EVs-ttwhk",
+        "title": "CJP का देश भर में प्रदर्शन, जंतर मंतर पर भारी भीड़"
+      },
+      {
+        "id": "cb_QgfgxZjc",
+        "title": "छात्रों के साथ हिंसा पर एक शब्द नहीं बोले पीएम"
+      }
+    ]
+  },
+  {
+    "id": "newslaundry",
+    "name": "Newslaundry",
+    "handle": "@newslaundry",
+    "channelId": "UCustbySVJGb659WDpdkeATg",
+    "youtubeUrl": "https://www.youtube.com/@newslaundry",
+    "founder": "Newslaundry",
+    "blurb": "Subscriber-funded media watchdog — holds the press accountable and digs into how news gets made.",
+    "language": "English",
+    "focus": "Media watch",
+    "subscribersLabel": "2M+",
+    "tags": [
+      "Media watchdog",
+      "Accountability",
+      "Subscriber-funded",
+      "English"
+    ],
+    "sampleVideos": [
+      {
+        "id": "rvCCPXcU6us",
+        "title": "‘They try to scare students all night’: Prakash Raj on student protests"
+      },
+      {
+        "id": "_HRW0Ao8UTc",
+        "title": "The law says ‘minimum force’. What did Delhi Police do?"
+      }
+    ]
+  },
+  {
+    "id": "the-wire",
+    "name": "The Wire",
+    "handle": "@TheWireNews",
+    "channelId": "UChWtJey46brNr7qHQpN6KLQ",
+    "youtubeUrl": "https://www.youtube.com/@TheWireNews",
+    "founder": "The Wire",
+    "blurb": "Investigative and public-interest journalism covering politics, rights, and underreported stories.",
+    "language": "Both",
+    "focus": "Investigation",
+    "subscribersLabel": "3M+",
+    "tags": [
+      "Investigation",
+      "Rights",
+      "Politics",
+      "Public interest"
+    ],
+    "sampleVideos": [
+      {
+        "id": "0jB1yhU3aU8",
+        "title": "CJP Protest | Jitendra Awhad on public anger coming out"
+      },
+      {
+        "id": "0QkDd-H7MBI",
+        "title": "Internet bans, shops shut, and student protests — Dushyant Dave"
+      }
+    ]
+  },
+  {
+    "id": "mojo-story",
+    "name": "Mojo Story",
+    "handle": "@MojoStory",
+    "channelId": "UCrdPiSPVW0rtRsI002BX8iw",
+    "youtubeUrl": "https://www.youtube.com/@MojoStory",
+    "founder": "Barkha Dutt",
+    "blurb": "Long-form reporting and hard conversations on politics, conflict, and social fault lines.",
+    "language": "English",
+    "focus": "Ground report",
+    "subscribersLabel": "1M+",
+    "tags": [
+      "Long-form",
+      "Conflict",
+      "Politics",
+      "Interviews"
+    ],
+    "sampleVideos": [
+      {
+        "id": "r4sWrJ9ay0Q",
+        "title": "CJP Protests | Modi’s midnight video vowing a big decision"
+      },
+      {
+        "id": "wEqkvgLELyo",
+        "title": "Exclusive: protester says pellets are still inside his body"
+      }
+    ]
+  },
+  {
+    "id": "unfiltered-samdish",
+    "name": "UNFILTERED by Samdish",
+    "handle": "@UNFILTEREDbysamdish",
+    "channelId": "UCOtQWL2z-tFbI-mgy_Rpdgg",
+    "youtubeUrl": "https://www.youtube.com/@UNFILTEREDbysamdish",
+    "founder": "Samdish Bhatia",
+    "blurb": "Street interviews and raw public opinion from across India — unscripted and often uncomfortable.",
+    "language": "Both",
+    "focus": "Ground report",
+    "subscribersLabel": "1M+",
+    "tags": [
+      "Street interview",
+      "Vox pop",
+      "Youth",
+      "Pan-India"
+    ],
+    "sampleVideos": [
+      {
+        "id": "DEsAc_NP1DM",
+        "title": "I didn’t start the day Angry"
+      },
+      {
+        "id": "6MTXCAaOy3o",
+        "title": "Good Morning India — Dekh Lo Humaara Naya Bharat"
+      }
+    ]
+  },
+  {
+    "id": "faye-dsouza",
+    "name": "Faye D’Souza",
+    "handle": "@fayedsouza",
+    "channelId": "UCzI8K9xO_5E-4iCP7Km6cRQ",
+    "youtubeUrl": "https://www.youtube.com/@fayedsouza",
+    "founder": "Faye D’Souza",
+    "blurb": "Clear explainers and daily news context — designed for people tired of shouting-panel TV.",
+    "language": "English",
+    "focus": "Explainer",
+    "subscribersLabel": "2M+",
+    "tags": [
+      "Daily news",
+      "Explainer",
+      "English",
+      "Context"
+    ],
+    "sampleVideos": [
+      {
+        "id": "Z2iI3UI1sGc",
+        "title": "RJD MP Manoj Jha on media and cognitive frameworks"
+      },
+      {
+        "id": "sbiHpk_0ttA",
+        "title": "Rahul Gandhi Accuses Police Of Blocking Protest March"
+      }
+    ]
+  },
+  {
+    "id": "abhisar-sharma",
+    "name": "Abhisar Sharma",
+    "handle": "@AbhisarSharma",
+    "channelId": "UCyjbaFoRqzAgVJahg_TJUow",
+    "youtubeUrl": "https://www.youtube.com/@AbhisarSharma",
+    "founder": "Abhisar Sharma",
+    "blurb": "Independent political reporting that aims to hold power accountable beyond prime-time theatre.",
+    "language": "Hindi",
+    "focus": "Analysis",
+    "subscribersLabel": "9M+",
+    "tags": [
+      "Politics",
+      "Hindi",
+      "Accountability",
+      "Prime-time alternative"
+    ],
+    "sampleVideos": []
+  },
+  {
+    "id": "the-news-minute",
+    "name": "The News Minute",
+    "handle": "@thenewsminute",
+    "channelId": "UCspQie3i29iIFbCgfGisO9Q",
+    "youtubeUrl": "https://www.youtube.com/@thenewsminute",
+    "founder": "The News Minute",
+    "blurb": "South India–focused digital newsroom covering politics, culture, and underreported regional stories.",
+    "language": "English",
+    "focus": "Ground report",
+    "subscribersLabel": "1M+",
+    "tags": [
+      "South India",
+      "Regional",
+      "Politics",
+      "Culture"
+    ],
+    "sampleVideos": [
+      {
+        "id": "uNnTWzmKaJs",
+        "title": "Senior advocate tells Delhi HC: ‘A DCP slapped a woman standing innocently’"
+      },
+      {
+        "id": "reluuk89Eg0",
+        "title": "Actor and activist Prakash Raj recites Kusiyiri"
+      }
+    ]
+  },
+  {
+    "id": "article-14",
+    "name": "Article Fourteen",
+    "handle": "@ArticleFourteen",
+    "channelId": "UCuU6E3ssd8V5b_4oDHDkiaQ",
+    "youtubeUrl": "https://www.youtube.com/@ArticleFourteen",
+    "founder": "Article Fourteen",
+    "blurb": "Courtroom-focused legal explainers — bail hearings, arguments, and the working of Indian courts.",
+    "language": "Both",
+    "focus": "Legal",
+    "subscribersLabel": "Niche",
+    "tags": [
+      "Courts",
+      "Legal",
+      "Bail",
+      "Constitution"
+    ],
+    "sampleVideos": [
+      {
+        "id": "FRS8P88T4fM",
+        "title": "Unique court argument in third bail application | Patna High Court"
+      }
+    ]
+  },
+  {
+    "id": "soch",
+    "name": "Soch by Mohak",
+    "handle": "@mohak_mangal",
+    "channelId": "UCz4a7agVFr1TxU-mpAP8hkw",
+    "youtubeUrl": "https://www.youtube.com/@mohak_mangal",
+    "founder": "Mohak Mangal",
+    "blurb": "Data-backed explainers that unpack policy, society, and current affairs for younger audiences.",
+    "language": "Hindi",
+    "focus": "Explainer",
+    "subscribersLabel": "4M+",
+    "tags": [
+      "Data",
+      "Policy",
+      "Youth",
+      "Society"
+    ],
+    "sampleVideos": [
+      {
+        "id": "v-RikSqb0Vw",
+        "title": "\"We the people of India...\""
+      },
+      {
+        "id": "ePuETfDq1Rw",
+        "title": "Trauma ft. Indian government websites"
+      }
+    ]
+  },
+  {
+    "id": "deshbhakt",
+    "name": "The Deshbhakt",
+    "handle": "@TheDeshbhakt",
+    "channelId": "UCmTM_hPCeckqN3cPWtYZZcg",
+    "youtubeUrl": "https://www.youtube.com/@TheDeshbhakt",
+    "founder": "Akash Banerjee",
+    "blurb": "Political satire and analysis that cuts through party talking points with research and humour.",
+    "language": "Hindi",
+    "focus": "Satire",
+    "subscribersLabel": "5M+",
+    "tags": [
+      "Satire",
+      "Politics",
+      "Research",
+      "Hindi"
+    ],
+    "sampleVideos": [
+      {
+        "id": "VjJLrsUbyaM",
+        "title": "How To Kill A Cockroach | Inside the plan to end student protests"
+      },
+      {
+        "id": "MEkK0jGdjlg",
+        "title": "Will deadly force be used against CJP protesters?"
+      }
+    ]
+  },
+  {
+    "id": "nitish-rajput",
+    "name": "Nitish Rajput",
+    "handle": "@NitishRajput",
+    "channelId": "UC6WzPg6yxF9dQx2_O6R4lww",
+    "youtubeUrl": "https://www.youtube.com/@NitishRajput",
+    "founder": "Nitish Rajput",
+    "blurb": "Multi-angle explainers on politics and current affairs aimed at encouraging critical thinking.",
+    "language": "Hindi",
+    "focus": "Explainer",
+    "subscribersLabel": "7M+",
+    "tags": [
+      "Explainer",
+      "Politics",
+      "Critical thinking",
+      "Hindi"
+    ],
+    "sampleVideos": [
+      {
+        "id": "acunHsQcHS0",
+        "title": "Ram Mandir Chori | Nitish Rajput"
+      },
+      {
+        "id": "IpeeZ-sYhHU",
+        "title": "Dark Reality of the Epstein Files | Nitish Rajput"
+      }
+    ]
+  }
+]

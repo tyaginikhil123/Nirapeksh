@@ -1,0 +1,88 @@
+export type UiLang = 'en' | 'hi'
+
+const dict = {
+  en: {
+    channels: 'Channels',
+    feedback: 'Feedback',
+    about: 'About',
+    bookmarks: 'Bookmarks',
+    admin: 'Admin',
+    heroTitle: 'Independent Indian YouTube news, rated by signed-in viewers.',
+    heroLede:
+      'Browse channels like News Pinch and Jist, sign in with Google to rate fairly, and open them on YouTube.',
+    channelList: 'Channel list',
+    channelListLede:
+      'Each row shows the channel icon plus 1–2 recent videos. Ratings need Google sign-in. Reviews are optional.',
+    search: 'Search channels or video topics',
+    searchPlaceholder: 'Try paper leak, Jantar Mantar, courts…',
+    language: 'Language',
+    focus: 'Focus',
+    tag: 'Tag',
+    sort: 'Sort',
+    topRated: 'Top rated',
+    name: 'Name',
+    refresh: 'Refresh filters',
+    openChannel: 'Open channel',
+    whyTrust: 'Why I trust this (optional)',
+    whyTrustPlaceholder: '1–2 lines — optional',
+    saveReview: 'Save review',
+    reviews: 'Viewer notes',
+    bookmark: 'Bookmark',
+    bookmarked: 'Bookmarked',
+    showBookmarks: 'Bookmarks only',
+    allLanguages: 'All languages',
+    signInToRate: 'Sign in with Google to rate',
+    aboutTitle: 'About & listing criteria',
+    feedbackTitle: 'Feedback',
+    madeBy: 'Made by',
+    themeLight: 'Light',
+    themeDark: 'Dark',
+    noResults: 'No channels match that filter.',
+    loginNeeded: 'Google login is not configured yet. Add Firebase keys to .env.',
+  },
+  hi: {
+    channels: 'चैनल',
+    feedback: 'फीडबैक',
+    about: 'परिचय',
+    bookmarks: 'बुकमार्क',
+    admin: 'एडमिन',
+    heroTitle: 'स्वतंत्र भारतीय यूट्यूब समाचार — साइन-इन दर्शकों द्वारा रेटेड।',
+    heroLede:
+      'न्यूज़ पिंच और जिस्ट जैसे चैनल देखें, गूगल से साइन-इन कर रेट करें, और यूट्यूब पर खोलें।',
+    channelList: 'चैनल सूची',
+    channelListLede:
+      'हर पंक्ति में आइकन और 1–2 वीडियो दिखते हैं। रेटिंग के लिए गूगल साइन-इन ज़रूरी है। समीक्षा वैकल्पिक है।',
+    search: 'चैनल या वीडियो विषय खोजें',
+    searchPlaceholder: 'पेपर लीक, जंतर मंतर, कोर्ट… आज़माएँ',
+    language: 'भाषा',
+    focus: 'फोकस',
+    tag: 'टैग',
+    sort: 'क्रम',
+    topRated: 'टॉप रेटेड',
+    name: 'नाम',
+    refresh: 'फ़िल्टर रीसेट',
+    openChannel: 'चैनल खोलें',
+    whyTrust: 'मैं इस पर क्यों भरोसा करता/करती हूँ (वैकल्पिक)',
+    whyTrustPlaceholder: '1–2 पंक्तियाँ — ज़रूरी नहीं',
+    saveReview: 'समीक्षा सेव करें',
+    reviews: 'दर्शकों के नोट्स',
+    bookmark: 'बुकमार्क',
+    bookmarked: 'बुकमार्क किया',
+    showBookmarks: 'केवल बुकमार्क',
+    allLanguages: 'सभी भाषाएँ',
+    signInToRate: 'रेट करने के लिए गूगल से साइन-इन करें',
+    aboutTitle: 'परिचय और लिस्टिंग मानदंड',
+    feedbackTitle: 'फीडबैक',
+    madeBy: 'निर्माता',
+    themeLight: 'लाइट',
+    themeDark: 'डार्क',
+    noResults: 'इस फ़िल्टर से कोई चैनल नहीं मिला।',
+    loginNeeded: 'गूगल लॉगिन अभी सेट नहीं है। .env में Firebase कुंजियाँ जोड़ें।',
+  },
+} as const
+
+export type DictKey = keyof typeof dict.en
+
+export function t(lang: UiLang, key: DictKey): string {
+  return dict[lang][key]
+}
