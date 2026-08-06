@@ -40,7 +40,7 @@ export function StarRating({
               className={`star-rating__star${filled ? ' is-filled' : ''}${isUser ? ' is-user' : ''}`}
               aria-label={locked ? t('signInToRate') : `Rate ${star} out of 5`}
               aria-pressed={userRating === star}
-              disabled={disabled || locked}
+              disabled={disabled}
               onClick={() => {
                 if (locked) {
                   onUnlock?.()

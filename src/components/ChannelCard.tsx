@@ -21,7 +21,6 @@ type ChannelCardProps = {
   onRequestLogin?: () => void
   bookmarked?: boolean
   onToggleBookmark?: (channelId: string) => void
-  getToken: () => Promise<string | null>
 }
 
 function toLiveVideo(video: { id: string; title: string }): LiveVideo {
@@ -43,7 +42,6 @@ export function ChannelCard({
   onRequestLogin,
   bookmarked = false,
   onToggleBookmark,
-  getToken,
 }: ChannelCardProps) {
   const { t } = useI18n()
   const average = getAverage(rating)
@@ -51,17 +49,22 @@ export function ChannelCard({
   const [avatar, setAvatar] = useState(fallbackAvatar)
   const [avatarFailed, setAvatarFailed] = useState(false)
   const [liveVideos, setLiveVideos] = useState<LiveVideo[] | null>(null)
+  const [videosLoading, setVideosLoading] = useState(true)
 
   useEffect(() => {
     let cancelled = false
+    setVideosLoading(true)
     fetchChannelMeta(channel.channelId, channel.handle)
       .then((data) => {
         if (cancelled) return
         if (data.avatar) setAvatar(data.avatar)
-        if (data.videos.length) setLiveVideos(data.videos)
+        setLiveVideos(data.videos)
       })
       .catch(() => {
-        /* keep fallbacks */
+        if (!cancelled) setLiveVideos([])
+      })
+      .finally(() => {
+        if (!cancelled) setVideosLoading(false)
       })
     return () => {
       cancelled = true
@@ -69,9 +72,10 @@ export function ChannelCard({
   }, [channel.channelId, channel.handle])
 
   const videos = useMemo(() => {
-    if (liveVideos?.length) return liveVideos.slice(0, 2)
-    return channel.sampleVideos.map(toLiveVideo).slice(0, 2)
-  }, [liveVideos, channel.sampleVideos])
+    if (videosLoading) return []
+    if (liveVideos?.length) return liveVideos.slice(0, 4)
+    return channel.sampleVideos.map(toLiveVideo).slice(0, 4)
+  }, [videosLoading, liveVideos, channel.sampleVideos])
 
   const initials = channel.name
     .split(' ')
@@ -152,8 +156,15 @@ export function ChannelCard({
 
         <p className="channel__blurb">{channel.blurb}</p>
 
-        <div className="channel__videos" aria-label={`Sample videos from ${channel.name}`}>
-          {videos.length > 0 ? (
+        <div className="channel__videos" aria-label={`Latest videos from ${channel.name}`}>
+          {videosLoading ? (
+            Array.from({ length: 4 }, (_, i) => (
+              <div key={i} className="video-chip" aria-hidden="true">
+                <div className="video-chip--skeleton" />
+                <span>Loading…</span>
+              </div>
+            ))
+          ) : videos.length > 0 ? (
             videos.map((video) => (
               <a
                 key={video.id + video.title}
@@ -192,7 +203,6 @@ export function ChannelCard({
         <TrustReviewBlock
           channelId={channel.id}
           canWrite={Boolean(canRate)}
-          getToken={getToken}
           onRequestLogin={onRequestLogin}
         />
         <a

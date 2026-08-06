@@ -21,18 +21,21 @@ import {
 } from './data/channels'
 import { useI18n } from './i18n/I18nContext'
 import { readBookmarks, toggleBookmark } from './lib/bookmarks'
-import { fetchChannelsApi } from './lib/reviews'
 import {
   fetchAllRatings,
   getAverage,
+  loadChannelsOrSeed,
   submitAuthenticatedRating,
   type RatingState,
 } from './lib/ratings'
 import { useTheme } from './theme/ThemeContext'
 
 const MAKER_EMAIL = 'kumarnikhil474551@gmail.com'
+const ADMIN_EMAIL = (
+  import.meta.env.VITE_ADMIN_EMAIL as string | undefined
+)?.toLowerCase() || MAKER_EMAIL.toLowerCase()
 
-type View = 'home' | 'about' | 'admin'
+type View = 'home' | 'about' | 'admin' | 'feedback'
 
 function emptyRatings(list: Channel[]): Record<string, RatingState> {
   return Object.fromEntries(
@@ -44,7 +47,7 @@ function emptyRatings(list: Channel[]): Record<string, RatingState> {
 }
 
 export default function App() {
-  const { user, configured, loading: authLoading, getToken, signIn } = useAuth()
+  const { user, configured, loading: authLoading } = useAuth()
   const { t, lang, setLang } = useI18n()
   const { theme, toggleTheme } = useTheme()
 
@@ -65,16 +68,9 @@ export default function App() {
 
   useEffect(() => {
     let cancelled = false
-    fetchChannelsApi()
-      .then((data) => {
-        if (cancelled) return
-        if (Array.isArray(data.channels) && data.channels.length) {
-          setChannelList(data.channels as Channel[])
-        }
-      })
-      .catch(() => {
-        /* keep seed */
-      })
+    loadChannelsOrSeed(seedChannels).then((list) => {
+      if (!cancelled && list.length) setChannelList(list)
+    })
     return () => {
       cancelled = true
     }
@@ -84,11 +80,7 @@ export default function App() {
     let cancelled = false
 
     async function load() {
-      const token = user ? await getToken() : null
-      const data = await fetchAllRatings(
-        channelList.map((channel) => channel.id),
-        token,
-      )
+      const data = await fetchAllRatings(channelList.map((channel) => channel.id))
       if (!cancelled) setRatings(data)
     }
 
@@ -96,7 +88,7 @@ export default function App() {
     return () => {
       cancelled = true
     }
-  }, [user, getToken, channelList])
+  }, [user, channelList])
 
   const tagOptions = useMemo(() => allTags(channelList), [channelList])
 
@@ -166,12 +158,8 @@ export default function App() {
       setRatingError(t('loginNeeded'))
       return
     }
-    try {
-      await signIn()
-      setRatingError('')
-    } catch (err) {
-      setRatingError(err instanceof Error ? err.message : 'Sign-in failed')
-    }
+    setRatingError('Use Sign in with Google in the top-right header first.')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   async function handleRate(channelId: string, value: number) {
@@ -183,9 +171,7 @@ export default function App() {
     setRatingBusyId(channelId)
     setRatingError('')
     try {
-      const token = await getToken()
-      if (!token) throw new Error('Missing login token')
-      const next = await submitAuthenticatedRating(channelId, value, token)
+      const next = await submitAuthenticatedRating(channelId, value)
       setRatings((prev) => ({ ...prev, [channelId]: next }))
     } catch (err) {
       setRatingError(err instanceof Error ? err.message : 'Could not save rating')
@@ -197,6 +183,16 @@ export default function App() {
   function handleToggleBookmark(channelId: string) {
     setBookmarks(toggleBookmark(channelId))
   }
+
+  const isAdminUser = Boolean(
+    user?.email && user.email.toLowerCase() === ADMIN_EMAIL,
+  )
+
+  useEffect(() => {
+    if (view === 'admin' && !isAdminUser) {
+      setView('home')
+    }
+  }, [view, isAdminUser])
 
   return (
     <div className="page">
@@ -217,10 +213,22 @@ export default function App() {
             <button type="button" className="nav-link" onClick={() => setView('about')}>
               {t('about')}
             </button>
-            <a href="#feedback">{t('feedback')}</a>
-            <button type="button" className="nav-link" onClick={() => setView('admin')}>
-              {t('admin')}
+            <button
+              type="button"
+              className="nav-link"
+              onClick={() => setView('feedback')}
+            >
+              {t('feedback')}
             </button>
+            {isAdminUser ? (
+              <button
+                type="button"
+                className="nav-link"
+                onClick={() => setView('admin')}
+              >
+                {t('admin')}
+              </button>
+            ) : null}
           </nav>
           <div className="toolbar">
             <button type="button" className="auth-btn" onClick={toggleTheme}>
@@ -247,7 +255,8 @@ export default function App() {
 
       <main id="top">
         {view === 'about' ? <AboutPage /> : null}
-        {view === 'admin' ? (
+        {view === 'feedback' ? <FeedbackForm /> : null}
+        {view === 'admin' && isAdminUser ? (
           <AdminPanel
             channels={channelList}
             onSaved={(next) => {
@@ -319,7 +328,6 @@ export default function App() {
                     onRequestLogin={() => void handleRequestLogin()}
                     bookmarked={bookmarks.includes(channel.id)}
                     onToggleBookmark={handleToggleBookmark}
-                    getToken={getToken}
                   />
                 ))}
               </div>
@@ -333,8 +341,6 @@ export default function App() {
                 </p>
               )}
             </section>
-
-            <FeedbackForm />
           </>
         ) : null}
       </main>
@@ -348,10 +354,17 @@ export default function App() {
           </p>
         </div>
         <div className="site-footer__maker">
-          <p>
-            {t('madeBy')} <strong>Nikhil Tyagi</strong>
-          </p>
-          <a href={`mailto:${MAKER_EMAIL}`}>{MAKER_EMAIL}</a>
+          <div className="maker-mark" aria-hidden="true">
+            NT
+          </div>
+          <div className="maker-copy">
+            <p className="maker-copy__eyebrow">{t('madeBy')}</p>
+            <p className="maker-copy__name">Nikhil Tyagi</p>
+            <p className="maker-copy__role">
+              Builder of Nirapeksh · Independent media directory
+            </p>
+            <a href={`mailto:${MAKER_EMAIL}`}>{MAKER_EMAIL}</a>
+          </div>
         </div>
       </footer>
     </div>

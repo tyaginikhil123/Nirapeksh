@@ -129,10 +129,36 @@ async function verifyFirebaseIdToken(idToken: string) {
   }
 }
 
-function isAdminRequest(req: IncomingMessage) {
+function isAdminSecretOk(req: IncomingMessage) {
   const expected = getEnv('ADMIN_SECRET') || getEnv('VITE_ADMIN_SECRET')
   if (!expected) return false
   return req.headers['x-admin-secret'] === expected
+}
+
+function getAdminEmail() {
+  return (
+    getEnv('ADMIN_EMAIL') ||
+    getEnv('VITE_ADMIN_EMAIL') ||
+    'kumarnikhil474551@gmail.com'
+  ).toLowerCase()
+}
+
+async function requireAdminAccess(req: IncomingMessage) {
+  if (!isAdminSecretOk(req)) {
+    return { ok: false as const, error: 'Admin secret required' }
+  }
+  const token = getBearerToken(req)
+  if (!token) {
+    return {
+      ok: false as const,
+      error: 'Sign in with the admin Google account to manage channels',
+    }
+  }
+  const user = await verifyFirebaseIdToken(token)
+  if (!user?.email || user.email.toLowerCase() !== getAdminEmail()) {
+    return { ok: false as const, error: 'This Google account is not allowed as admin' }
+  }
+  return { ok: true as const, user }
 }
 
 function publicChannels(store: RatingsFile) {
@@ -229,9 +255,85 @@ function apiMiddleware(): Connect.NextHandleFunction {
         return sendJson(res, 200, { channels: ensureChannels() })
       }
 
+      if (url.startsWith('/api/feedback') && req.method === 'POST') {
+        const raw = await readBody(req)
+        const body = JSON.parse(raw) as {
+          name?: string
+          email?: string
+          message?: string
+        }
+        const name = body.name?.trim() ?? ''
+        const email = body.email?.trim() ?? ''
+        const message = body.message?.trim() ?? ''
+
+        if (!name || !email || !message) {
+          return sendJson(res, 400, { error: 'Name, email and message are required' })
+        }
+
+        const entry = {
+          id: `fb-${Date.now()}`,
+          name,
+          email,
+          message,
+          createdAt: new Date().toISOString(),
+        }
+
+        const feedbackPath = path.join(DATA_DIR, 'feedback.json')
+        const existing = readJson<unknown[]>(feedbackPath, [])
+        const list = Array.isArray(existing) ? existing : []
+        list.unshift(entry)
+        writeJson(feedbackPath, list.slice(0, 200))
+
+        const to = getEnv('FEEDBACK_TO_EMAIL') || 'kumarnikhil474551@gmail.com'
+        const gmailUser = getEnv('GMAIL_USER')
+        const gmailPass = getEnv('GMAIL_APP_PASSWORD')
+
+        let emailed = false
+        let emailError = ''
+
+        if (gmailUser && gmailPass) {
+          try {
+            const nodemailer = await import('nodemailer')
+            const transporter = nodemailer.createTransport({
+              service: 'gmail',
+              auth: {
+                user: gmailUser,
+                pass: gmailPass,
+              },
+            })
+            await transporter.sendMail({
+              from: `"Nirapeksh Feedback" <${gmailUser}>`,
+              to,
+              replyTo: email,
+              subject: `Nirapeksh feedback from ${name}`,
+              text: `Name: ${name}\nEmail: ${email}\n\n${message}`,
+              html: `<p><strong>Name:</strong> ${name}</p><p><strong>Email:</strong> ${email}</p><p>${message.replace(/\n/g, '<br/>')}</p>`,
+            })
+            emailed = true
+          } catch (error) {
+            emailError =
+              error instanceof Error ? error.message : 'Gmail send failed'
+            console.warn('Gmail feedback send failed', error)
+          }
+        } else {
+          emailError = 'Gmail is not configured in .env'
+        }
+
+        return sendJson(res, 200, {
+          ok: true,
+          stored: true,
+          emailed,
+          message: emailed
+            ? 'Feedback emailed successfully.'
+            : 'Feedback saved. Add GMAIL_USER and GMAIL_APP_PASSWORD in .env to enable email.',
+          emailError: emailed ? undefined : emailError,
+        })
+      }
+
       if (url.startsWith('/api/channels') && req.method === 'PUT') {
-        if (!isAdminRequest(req)) {
-          return sendJson(res, 401, { error: 'Admin secret required' })
+        const access = await requireAdminAccess(req)
+        if (!access.ok) {
+          return sendJson(res, 401, { error: access.error })
         }
         const raw = await readBody(req)
         const body = JSON.parse(raw) as { channels?: unknown[] }

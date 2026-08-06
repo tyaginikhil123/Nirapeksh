@@ -14,6 +14,7 @@ import {
   subscribeToAuth,
   type User,
 } from '../lib/firebase'
+import { ensureUserProfile } from '../lib/users'
 
 type AuthContextValue = {
   user: User | null
@@ -31,10 +32,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(isFirebaseConfigured)
 
   useEffect(() => {
-    return subscribeToAuth((next) => {
+    let cancelled = false
+
+    const safety = window.setTimeout(() => {
+      if (!cancelled) setLoading(false)
+    }, 4000)
+
+    const unsub = subscribeToAuth((next) => {
+      if (cancelled) return
       setUser(next)
       setLoading(false)
+      window.clearTimeout(safety)
+      if (next) {
+        void ensureUserProfile(next).catch((error) => {
+          console.warn('Could not save user profile', error)
+        })
+      }
     })
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(safety)
+      unsub()
+    }
   }, [])
 
   const value = useMemo<AuthContextValue>(

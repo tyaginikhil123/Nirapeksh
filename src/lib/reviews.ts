@@ -1,58 +1,94 @@
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  orderBy,
+  query,
+  setDoc,
+} from 'firebase/firestore'
+import { getCurrentUser, getDb, isFirebaseConfigured } from './firebase'
+import {
+  fetchChannelsFromFirestore,
+  saveChannelsToFirestore,
+} from './ratings'
+import type { Channel } from '../data/channels'
+
 export type TrustReview = {
   uid: string
   name: string
+  email?: string | null
+  photoURL?: string | null
   text: string
   createdAt: string
+  updatedAt?: string
 }
 
-export async function fetchReviews(
-  channelId: string,
-): Promise<TrustReview[]> {
-  const res = await fetch(`/api/reviews?channelId=${encodeURIComponent(channelId)}`)
-  if (!res.ok) return []
-  const data = (await res.json()) as { reviews?: TrustReview[] }
-  return data.reviews ?? []
+export async function fetchReviews(channelId: string): Promise<TrustReview[]> {
+  if (!isFirebaseConfigured) return []
+  try {
+    const q = query(
+      collection(getDb(), 'reviews', channelId, 'entries'),
+      orderBy('createdAt', 'desc'),
+    )
+    const snap = await getDocs(q)
+    return snap.docs.map((item) => item.data() as TrustReview)
+  } catch (error) {
+    console.warn('Failed to load reviews', error)
+    return []
+  }
 }
 
 export async function submitReview(
   channelId: string,
   text: string,
-  idToken: string,
 ): Promise<TrustReview[]> {
-  const res = await fetch('/api/reviews', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${idToken}`,
-    },
-    body: JSON.stringify({ channelId, text }),
-  })
-  if (!res.ok) {
-    const err = (await res.json().catch(() => null)) as { error?: string } | null
-    throw new Error(err?.error ?? 'Could not save review')
+  const user = getCurrentUser()
+  if (!user) throw new Error('Sign in required')
+
+  const trimmed = text.trim()
+  const ref = doc(getDb(), 'reviews', channelId, 'entries', user.uid)
+
+  if (!trimmed) {
+    await deleteDoc(ref)
+  } else {
+    if (trimmed.length > 280) throw new Error('Review must be under 280 characters')
+    await setDoc(ref, {
+      uid: user.uid,
+      name: user.displayName || user.email || 'Viewer',
+      email: user.email ?? null,
+      photoURL: user.photoURL ?? null,
+      text: trimmed,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    })
   }
-  const data = (await res.json()) as { reviews: TrustReview[] }
-  return data.reviews
+
+  return fetchReviews(channelId)
 }
 
 export async function fetchChannelsApi() {
-  const res = await fetch('/api/channels')
-  if (!res.ok) throw new Error('Could not load channels')
-  return (await res.json()) as { channels: unknown[] }
+  const channels = await fetchChannelsFromFirestore()
+  return { channels }
 }
 
-export async function saveChannelsApi(channels: unknown[], adminSecret: string) {
-  const res = await fetch('/api/channels', {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Admin-Secret': adminSecret,
-    },
-    body: JSON.stringify({ channels }),
-  })
-  if (!res.ok) {
-    const err = (await res.json().catch(() => null)) as { error?: string } | null
-    throw new Error(err?.error ?? 'Could not save channels')
+export async function saveChannelsApi(channels: Channel[]) {
+  const saved = await saveChannelsToFirestore(channels)
+  return { channels: saved }
+}
+
+export async function submitFeedback(input: {
+  name: string
+  email: string
+  message: string
+}) {
+  if (!isFirebaseConfigured) {
+    throw new Error('Firebase is not configured')
   }
-  return (await res.json()) as { channels: unknown[] }
+  const id = `fb-${Date.now()}`
+  await setDoc(doc(getDb(), 'feedback', id), {
+    ...input,
+    createdAt: new Date().toISOString(),
+  })
+  return { ok: true, stored: true, emailed: false }
 }

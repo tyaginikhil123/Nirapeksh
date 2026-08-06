@@ -9,14 +9,12 @@ import {
 type TrustReviewBlockProps = {
   channelId: string
   canWrite: boolean
-  getToken: () => Promise<string | null>
   onRequestLogin?: () => void
 }
 
 export function TrustReviewBlock({
   channelId,
   canWrite,
-  getToken,
   onRequestLogin,
 }: TrustReviewBlockProps) {
   const { t } = useI18n()
@@ -43,9 +41,7 @@ export function TrustReviewBlock({
     setBusy(true)
     setError('')
     try {
-      const token = await getToken()
-      if (!token) throw new Error('Missing login token')
-      const next = await submitReview(channelId, draft.trim(), token)
+      const next = await submitReview(channelId, draft.trim())
       setReviews(next)
       if (!draft.trim()) setDraft('')
     } catch (err) {

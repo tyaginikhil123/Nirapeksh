@@ -25,9 +25,6 @@ const emptyChannel = (): Channel => ({
 })
 
 export function AdminPanel({ channels, onSaved, onClose }: AdminPanelProps) {
-  const [secret, setSecret] = useState(
-    () => sessionStorage.getItem('nirapeksh-admin-secret') ?? '',
-  )
   const [draft, setDraft] = useState(() => JSON.stringify(channels, null, 2))
   const [selectedId, setSelectedId] = useState(channels[0]?.id ?? '')
   const [message, setMessage] = useState('')
@@ -74,10 +71,9 @@ export function AdminPanel({ channels, onSaved, onClose }: AdminPanelProps) {
     setBusy(true)
     setMessage('')
     try {
-      sessionStorage.setItem('nirapeksh-admin-secret', secret)
-      const result = await saveChannelsApi(parsed, secret)
+      const result = await saveChannelsApi(parsed)
       onSaved(result.channels as Channel[])
-      setMessage('Saved')
+      setMessage('Saved to Firestore')
     } catch (err) {
       setMessage(err instanceof Error ? err.message : 'Save failed')
     } finally {
@@ -94,19 +90,9 @@ export function AdminPanel({ channels, onSaved, onClose }: AdminPanelProps) {
         </button>
       </div>
       <p className="admin-panel__lede">
-        Edit channel listings. Set <code>ADMIN_SECRET</code> in <code>.env</code>{' '}
-        and enter it below.
+        Private admin area. Changes save directly to Firestore. Only your admin
+        Google account can write channels.
       </p>
-
-      <label className="admin-panel__secret">
-        Admin secret
-        <input
-          type="password"
-          value={secret}
-          onChange={(e) => setSecret(e.target.value)}
-          placeholder="ADMIN_SECRET"
-        />
-      </label>
 
       <div className="admin-panel__layout">
         <div className="admin-panel__list">
