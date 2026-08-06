@@ -15,7 +15,7 @@ type I18nContextValue = {
 }
 
 const I18nContext = createContext<I18nContextValue | null>(null)
-const KEY = 'nirapeksh-ui-lang'
+const KEY = 'nirpeksh-ui-lang'
 
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<UiLang>(() => {

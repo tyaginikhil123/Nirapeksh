@@ -1,49 +1,44 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { useAuth } from '../auth/AuthContext'
-import {
-  googleClientId,
-  mountGoogleSignInButton,
-  signInWithGooglePopup,
-} from '../lib/firebase'
+
+function GoogleMark() {
+  return (
+    <svg
+      className="google-signin__mark"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path
+        fill="#4285F4"
+        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+      />
+    </svg>
+  )
+}
 
 export function AuthControls() {
-  const { user, loading, configured, signOut } = useAuth()
-  const buttonHost = useRef<HTMLDivElement>(null)
+  const { user, loading, configured, signIn, signOut } = useAuth()
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
-  useEffect(() => {
-    if (!configured || loading || user || !googleClientId) return
-    const el = buttonHost.current
-    if (!el) return
-
-    let cleanup: (() => void) | undefined
-    let cancelled = false
-
-    void mountGoogleSignInButton(el, (message) => {
-      if (!cancelled) setError(message)
-    })
-      .then((dispose) => {
-        if (cancelled) dispose()
-        else cleanup = dispose
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Google button failed')
-        }
-      })
-
-    return () => {
-      cancelled = true
-      cleanup?.()
-    }
-  }, [configured, loading, user])
-
-  async function handlePopupFallback() {
+  async function handleSignIn() {
     setBusy(true)
     setError('')
     try {
-      await signInWithGooglePopup()
+      await signIn()
     } catch (err) {
       const code =
         err && typeof err === 'object' && 'code' in err
@@ -51,11 +46,11 @@ export function AuthControls() {
           : ''
       if (
         code === 'auth/popup-closed-by-user' ||
-        code === 'auth/popup-blocked'
+        code === 'auth/cancelled-popup-request'
       ) {
-        setError(
-          'Popup still blocked. Add VITE_GOOGLE_CLIENT_ID (see below) and use the Google button.',
-        )
+        setError('')
+      } else if (code === 'auth/popup-blocked') {
+        setError('Popup blocked — allow popups for this site and try again.')
       } else {
         setError(err instanceof Error ? err.message : 'Sign-in failed')
       }
@@ -101,26 +96,16 @@ export function AuthControls() {
   }
 
   return (
-    <div className="auth-controls auth-controls--stack">
-      {googleClientId ? (
-        <div ref={buttonHost} className="auth-google-btn" />
-      ) : (
-        <>
-          <button
-            type="button"
-            className="auth-btn auth-btn--primary"
-            disabled={busy}
-            onClick={() => void handlePopupFallback()}
-          >
-            {busy ? 'Signing in…' : 'Sign in with Google'}
-          </button>
-          <span className="auth-error">
-            Popup keeps failing in Chrome. Add Web client ID to `.env` as
-            `VITE_GOOGLE_CLIENT_ID` (Firebase → Authentication → Google → Web
-            client ID), then restart `npm run dev`.
-          </span>
-        </>
-      )}
+    <div className="auth-controls auth-controls--signin">
+      <button
+        type="button"
+        className="google-signin"
+        disabled={busy}
+        onClick={() => void handleSignIn()}
+      >
+        <GoogleMark />
+        <span>{busy ? 'Signing in…' : 'Sign in with Google'}</span>
+      </button>
       {error ? <span className="auth-error">{error}</span> : null}
     </div>
   )

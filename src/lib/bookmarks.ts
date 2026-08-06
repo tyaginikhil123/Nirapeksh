@@ -1,4 +1,4 @@
-const KEY = 'nirapeksh-bookmarks-v1'
+const KEY = 'nirpeksh-bookmarks-v1'
 
 export function readBookmarks(): string[] {
   try {

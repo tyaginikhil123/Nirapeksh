@@ -1,8 +1,8 @@
-# Nirapeksh
+# Nirpeksh
 
 Directory of independent Indian YouTube news channels — rate with Google login, optional trust notes, bookmarks, Hindi/English UI, and an admin panel.
 
-**Nirapeksh (निरपेक्ष)** means impartial.
+**Nirpeksh (निरपेक्ष)** means impartial.
 
 Stack: **Vite + React** frontend on **Firebase Hosting**, data in **Firestore**, login via **Firebase Auth (Google)**. Free on the Spark plan.
 

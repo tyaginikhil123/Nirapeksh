@@ -5,7 +5,7 @@ export type LiveVideo = {
   url: string
 }
 
-const CACHE_PREFIX = 'nirapeksh-yt-videos:'
+const CACHE_PREFIX = 'nirpeksh-yt-videos:'
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000 // refresh every 6 hours
 const TOP_N = 4
 const MAX_PARALLEL = 3

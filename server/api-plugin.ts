@@ -226,7 +226,7 @@ async function fetchYoutubeMeta(channelId: string, handle: string) {
 
   try {
     const feedRes = await fetch(feedUrl, {
-      headers: { 'User-Agent': 'Mozilla/5.0 NirapekshBot' },
+      headers: { 'User-Agent': 'Mozilla/5.0 NirpekshBot' },
     })
     if (feedRes.ok) videos = parseRssVideos(await feedRes.text())
   } catch (error) {
@@ -235,7 +235,7 @@ async function fetchYoutubeMeta(channelId: string, handle: string) {
 
   try {
     const pageRes = await fetch(pageUrl, {
-      headers: { 'User-Agent': 'Mozilla/5.0 NirapekshBot' },
+      headers: { 'User-Agent': 'Mozilla/5.0 NirpekshBot' },
     })
     if (pageRes.ok) avatar = extractAvatar(await pageRes.text()) || fallbackAvatar
   } catch (error) {
@@ -302,10 +302,10 @@ function apiMiddleware(): Connect.NextHandleFunction {
               },
             })
             await transporter.sendMail({
-              from: `"Nirapeksh Feedback" <${gmailUser}>`,
+              from: `"Nirpeksh Feedback" <${gmailUser}>`,
               to,
               replyTo: email,
-              subject: `Nirapeksh feedback from ${name}`,
+              subject: `Nirpeksh feedback from ${name}`,
               text: `Name: ${name}\nEmail: ${email}\n\n${message}`,
               html: `<p><strong>Name:</strong> ${name}</p><p><strong>Email:</strong> ${email}</p><p>${message.replace(/\n/g, '<br/>')}</p>`,
             })
@@ -474,9 +474,9 @@ function apiMiddleware(): Connect.NextHandleFunction {
   }
 }
 
-export function nirapekshApiPlugin(): Plugin {
+export function nirpekshApiPlugin(): Plugin {
   return {
-    name: 'nirapeksh-api',
+    name: 'nirpeksh-api',
     configureServer(server) {
       server.middlewares.use(apiMiddleware())
     },

@@ -39,6 +39,28 @@ export async function fetchReviews(channelId: string): Promise<TrustReview[]> {
   }
 }
 
+export type ChannelReview = TrustReview & {
+  channelId: string
+}
+
+/** Latest trust notes across channels (for Report). */
+export async function fetchAllChannelReviews(
+  channelIds: string[],
+): Promise<ChannelReview[]> {
+  if (!isFirebaseConfigured || channelIds.length === 0) return []
+
+  const batches = await Promise.all(
+    channelIds.map(async (channelId) => {
+      const list = await fetchReviews(channelId)
+      return list.map((review) => ({ ...review, channelId }))
+    }),
+  )
+
+  return batches
+    .flat()
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+}
+
 export async function submitReview(
   channelId: string,
   text: string,

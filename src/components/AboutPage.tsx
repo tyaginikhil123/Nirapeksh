@@ -9,7 +9,7 @@ export function AboutPage() {
       {lang === 'hi' ? (
         <>
           <p>
-            Nirapeksh स्वतंत्र भारतीय यूट्यूब समाचार चैनलों की सार्वजनिक सूची है —
+            Nirpeksh स्वतंत्र भारतीय यूट्यूब समाचार चैनलों की सार्वजनिक सूची है —
             खासकर उन रिपोर्टर्स और छोटी टीमों की, जो पारंपरिक प्राइम-टाइम के बाहर
             ज़मीनी काम कर रहे हैं।
           </p>
@@ -27,7 +27,7 @@ export function AboutPage() {
       ) : (
         <>
           <p>
-            Nirapeksh is a public directory of independent Indian YouTube news
+            Nirpeksh is a public directory of independent Indian YouTube news
             channels — especially reporters and small teams doing ground work
             outside captive prime-time media.
           </p>

@@ -378,5 +378,162 @@
         "title": "Dark Reality of the Epstein Files | Nitish Rajput"
       }
     ]
+  },
+  {
+    "id": "jaipur-dialogues",
+    "name": "The Jaipur Dialogues",
+    "handle": "@THEJAIPURDIALOGUES",
+    "channelId": "UCZjxPbi3AeB6YGKCfQ2TroQ",
+    "youtubeUrl": "https://www.youtube.com/@THEJAIPURDIALOGUES",
+    "founder": "Sanjay Dixit",
+    "blurb": "Long-form discussions on Indic thought, geopolitics, and current affairs with scholars and public voices.",
+    "language": "Both",
+    "focus": "Analysis",
+    "subscribersLabel": "1M+",
+    "tags": [
+      "Indic",
+      "Geopolitics",
+      "Discussion",
+      "Politics"
+    ],
+    "sampleVideos": []
+  },
+  {
+    "id": "ajeet-bharti",
+    "name": "Ajeet Bharti",
+    "handle": "@ajeetbharti",
+    "channelId": "UC0PV5M3VlgXlP0wUqTJIIeQ",
+    "youtubeUrl": "https://www.youtube.com/@ajeetbharti",
+    "founder": "Ajeet Bharti",
+    "blurb": "Hindi political and social commentary — analysis, satire, and takes on institutions and media.",
+    "language": "Hindi",
+    "focus": "Analysis",
+    "subscribersLabel": "800K+",
+    "tags": [
+      "Politics",
+      "Satire",
+      "Media",
+      "Hindi"
+    ],
+    "sampleVideos": [
+      {
+        "id": "t4igepHrV1k",
+        "title": "UGC: Don’t Stop Till Rollback | Ajeet Bharti"
+      }
+    ]
+  },
+  {
+    "id": "pulkit-tyagi",
+    "name": "Pulkit Tyagi",
+    "handle": "@pulkitnpc",
+    "channelId": "UCgQRMdlDCV1f83MjIJb3LKQ",
+    "youtubeUrl": "https://www.youtube.com/@pulkitnpc",
+    "founder": "Pulkit Tyagi",
+    "blurb": "Independent commentary on politics, cinema, and society — observation-led takes outside studio news.",
+    "language": "Hindi",
+    "focus": "Analysis",
+    "subscribersLabel": "Growing",
+    "tags": [
+      "Politics",
+      "Society",
+      "Cinema",
+      "Commentary"
+    ],
+    "sampleVideos": []
+  },
+  {
+    "id": "abhijit-chavda",
+    "name": "Abhijit Chavda",
+    "handle": "@abhijitchavda",
+    "channelId": "UC2bBsPXFWZWiBmkRiNlz8vg",
+    "youtubeUrl": "https://www.youtube.com/@abhijitchavda",
+    "founder": "Abhijit Chavda",
+    "blurb": "Geopolitics and history explainers — long-form takes on India, strategy, and world affairs.",
+    "language": "English",
+    "focus": "Analysis",
+    "subscribersLabel": "950K+",
+    "tags": [
+      "Geopolitics",
+      "History",
+      "Strategy",
+      "English"
+    ],
+    "sampleVideos": []
+  },
+  {
+    "id": "carvaka-podcast",
+    "name": "The Carvaka Podcast",
+    "handle": "@CarvakaPodcast",
+    "channelId": "UCKPxuul6zSLAfKSsm123Vww",
+    "youtubeUrl": "https://www.youtube.com/@CarvakaPodcast",
+    "founder": "Kushal Mehra",
+    "blurb": "Long-form conversations on politics, culture, and philosophy with journalists, scholars, and public voices.",
+    "language": "English",
+    "focus": "Analysis",
+    "subscribersLabel": "Growing",
+    "tags": [
+      "Podcast",
+      "Politics",
+      "Culture",
+      "Discussion"
+    ],
+    "sampleVideos": []
+  },
+  {
+    "id": "the-print",
+    "name": "ThePrint",
+    "handle": "@ThePrintIndia",
+    "channelId": "UCuyRsHZILrU7ZDIAbGASHdA",
+    "youtubeUrl": "https://www.youtube.com/@ThePrintIndia",
+    "founder": "Shekhar Gupta",
+    "blurb": "Digital newsroom covering politics, policy, defence, and ground reports with explainers and interviews.",
+    "language": "English",
+    "focus": "Analysis",
+    "subscribersLabel": "2M+",
+    "tags": [
+      "Politics",
+      "Policy",
+      "Defence",
+      "English"
+    ],
+    "sampleVideos": []
+  },
+  {
+    "id": "lallantop",
+    "name": "The Lallantop",
+    "handle": "@TheLallantop",
+    "channelId": "UCx8Z14PpntdaxCt2hakbQLQ",
+    "youtubeUrl": "https://www.youtube.com/@TheLallantop",
+    "founder": "The Lallantop",
+    "blurb": "Hindi digital news for everyday audiences — politics, society, culture, and explainers beyond prime-time TV.",
+    "language": "Hindi",
+    "focus": "Explainer",
+    "subscribersLabel": "30M+",
+    "tags": [
+      "Hindi",
+      "Politics",
+      "Society",
+      "Explainer"
+    ],
+    "sampleVideos": []
+  },
+  {
+    "id": "think-school",
+    "name": "Think School",
+    "handle": "@thethinkschool",
+    "channelId": "UCKZozRVHRYsYHGEyNKuhhdA",
+    "youtubeUrl": "https://www.youtube.com/@thethinkschool",
+    "founder": "Think School",
+    "blurb": "Business and geopolitics case studies that unpack companies, markets, and global forces in plain language.",
+    "language": "English",
+    "focus": "Explainer",
+    "subscribersLabel": "6M+",
+    "tags": [
+      "Business",
+      "Geopolitics",
+      "Case study",
+      "Education"
+    ],
+    "sampleVideos": []
   }
 ]

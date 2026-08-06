@@ -9,6 +9,7 @@ import {
 import {
   getIdToken,
   isFirebaseConfigured,
+  completeGoogleRedirectIfPresent,
   signInWithGoogle,
   signOutUser,
   subscribeToAuth,
@@ -37,6 +38,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const safety = window.setTimeout(() => {
       if (!cancelled) setLoading(false)
     }, 4000)
+
+    void completeGoogleRedirectIfPresent().catch(() => undefined)
 
     const unsub = subscribeToAuth((next) => {
       if (cancelled) return

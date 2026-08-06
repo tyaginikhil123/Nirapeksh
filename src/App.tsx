@@ -12,6 +12,7 @@ import { AuthControls } from './components/AuthControls'
 import { ChannelCard } from './components/ChannelCard'
 import { DirectoryFilters } from './components/DirectoryFilters'
 import { FeedbackForm } from './components/FeedbackForm'
+import { ReportPage } from './components/ReportPage'
 import {
   allTags,
   channels as seedChannels,
@@ -35,7 +36,7 @@ const ADMIN_EMAIL = (
   import.meta.env.VITE_ADMIN_EMAIL as string | undefined
 )?.toLowerCase() || MAKER_EMAIL.toLowerCase()
 
-type View = 'home' | 'about' | 'admin' | 'feedback'
+type View = 'home' | 'about' | 'admin' | 'feedback' | 'report'
 
 function emptyRatings(list: Channel[]): Record<string, RatingState> {
   return Object.fromEntries(
@@ -47,7 +48,7 @@ function emptyRatings(list: Channel[]): Record<string, RatingState> {
 }
 
 export default function App() {
-  const { user, configured, loading: authLoading } = useAuth()
+  const { user, configured, loading: authLoading, signIn } = useAuth()
   const { t, lang, setLang } = useI18n()
   const { theme, toggleTheme } = useTheme()
 
@@ -158,8 +159,24 @@ export default function App() {
       setRatingError(t('loginNeeded'))
       return
     }
-    setRatingError('Use Sign in with Google in the top-right header first.')
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    setRatingError('')
+    try {
+      await signIn()
+    } catch (err) {
+      const code =
+        err && typeof err === 'object' && 'code' in err
+          ? String(err.code)
+          : ''
+      if (
+        code === 'auth/popup-closed-by-user' ||
+        code === 'auth/cancelled-popup-request'
+      ) {
+        return
+      }
+      setRatingError(
+        err instanceof Error ? err.message : 'Sign-in failed. Try the header button.',
+      )
+    }
   }
 
   async function handleRate(channelId: string, value: number) {
@@ -203,19 +220,34 @@ export default function App() {
           onClick={() => setView('home')}
         >
           <span className="brand__mark" aria-hidden="true" />
-          Nirapeksh
+          Nirpeksh
         </a>
         <div className="site-header__right">
           <nav className="site-nav">
-            <button type="button" className="nav-link" onClick={() => setView('home')}>
+            <button
+              type="button"
+              className={`nav-link${view === 'home' ? ' is-active' : ''}`}
+              onClick={() => setView('home')}
+            >
               {t('channels')}
             </button>
-            <button type="button" className="nav-link" onClick={() => setView('about')}>
+            <button
+              type="button"
+              className={`nav-link${view === 'report' ? ' is-active' : ''}`}
+              onClick={() => setView('report')}
+            >
+              {t('report')}
+            </button>
+            <button
+              type="button"
+              className={`nav-link${view === 'about' ? ' is-active' : ''}`}
+              onClick={() => setView('about')}
+            >
               {t('about')}
             </button>
             <button
               type="button"
-              className="nav-link"
+              className={`nav-link${view === 'feedback' ? ' is-active' : ''}`}
               onClick={() => setView('feedback')}
             >
               {t('feedback')}
@@ -223,7 +255,7 @@ export default function App() {
             {isAdminUser ? (
               <button
                 type="button"
-                className="nav-link"
+                className={`nav-link${view === 'admin' ? ' is-active' : ''}`}
                 onClick={() => setView('admin')}
               >
                 {t('admin')}
@@ -255,6 +287,13 @@ export default function App() {
 
       <main id="top">
         {view === 'about' ? <AboutPage /> : null}
+        {view === 'report' ? (
+          <ReportPage
+            channels={channelList}
+            ratings={ratings}
+            onBrowseChannels={() => setView('home')}
+          />
+        ) : null}
         {view === 'feedback' ? <FeedbackForm /> : null}
         {view === 'admin' && isAdminUser ? (
           <AdminPanel
@@ -269,11 +308,16 @@ export default function App() {
 
         {view === 'home' ? (
           <>
-            <section className="hero hero--compact">
+            <section className="hero">
+              <div className="hero__glow" aria-hidden="true" />
               <div className="hero__content">
-                <p className="hero__brand">Nirapeksh</p>
-                <h1>{t('heroTitle')}</h1>
+                <h1 className="hero__brand">
+                  Nirpeksh
+                  <span className="hero__brand-hi">निरपेक्ष</span>
+                </h1>
+                <p className="hero__title">{t('heroTitle')}</p>
                 <p className="hero__lede">{t('heroLede')}</p>
+                <p className="hero__lede hero__lede--second">{t('heroLede2')}</p>
               </div>
             </section>
 
@@ -347,7 +391,7 @@ export default function App() {
 
       <footer className="site-footer">
         <div>
-          <strong>Nirapeksh</strong>
+          <strong>Nirpeksh</strong>
           <p>
             Verified ratings need Google sign-in. Trust notes are optional.
             Bookmarks stay in your browser.
@@ -361,7 +405,7 @@ export default function App() {
             <p className="maker-copy__eyebrow">{t('madeBy')}</p>
             <p className="maker-copy__name">Nikhil Tyagi</p>
             <p className="maker-copy__role">
-              Builder of Nirapeksh · Independent media directory
+              Builder of Nirpeksh · Independent media directory
             </p>
             <a href={`mailto:${MAKER_EMAIL}`}>{MAKER_EMAIL}</a>
           </div>

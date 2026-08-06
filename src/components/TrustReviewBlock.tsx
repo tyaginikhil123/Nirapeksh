@@ -54,26 +54,38 @@ export function TrustReviewBlock({
   return (
     <div className="trust-review">
       <p className="trust-review__label">{t('whyTrust')}</p>
-      <textarea
-        className="trust-review__input"
-        rows={2}
-        maxLength={280}
-        placeholder={t('whyTrustPlaceholder')}
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        disabled={!canWrite || busy}
-      />
-      <div className="trust-review__actions">
+      {canWrite ? (
+        <>
+          <textarea
+            className="trust-review__input"
+            rows={2}
+            maxLength={280}
+            placeholder={t('whyTrustPlaceholder')}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            disabled={busy}
+          />
+          <div className="trust-review__actions">
+            <button
+              type="button"
+              className="trust-review__save"
+              disabled={busy}
+              onClick={() => void handleSave()}
+            >
+              {t('saveReview')}
+            </button>
+            <span className="trust-review__hint">{draft.length}/280</span>
+          </div>
+        </>
+      ) : (
         <button
           type="button"
-          className="trust-review__save"
-          disabled={busy || (!canWrite && !onRequestLogin)}
-          onClick={() => void handleSave()}
+          className="trust-review__locked"
+          onClick={() => onRequestLogin?.()}
         >
-          {canWrite ? t('saveReview') : t('signInToRate')}
+          {t('signInToWrite')}
         </button>
-        <span className="trust-review__hint">{draft.length}/280</span>
-      </div>
+      )}
       {error ? <p className="trust-review__error">{error}</p> : null}
       {reviews.length > 0 ? (
         <ul className="trust-review__list" aria-label={t('reviews')}>

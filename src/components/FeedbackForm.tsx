@@ -43,7 +43,7 @@ export function FeedbackForm() {
   }
 
   function openMailFallback() {
-    const subject = encodeURIComponent('Nirapeksh website feedback')
+    const subject = encodeURIComponent('Nirpeksh website feedback')
     const body = encodeURIComponent(
       `Name: ${name}\nEmail: ${email}\n\n${message}`,
     )
@@ -94,8 +94,8 @@ export function FeedbackForm() {
             required
             placeholder={
               lang === 'hi'
-                ? 'Nirapeksh में क्या जोड़ना/सुधारना चाहिए?'
-                : 'What should Nirapeksh improve or add?'
+                ? 'Nirpeksh में क्या जोड़ना/सुधारना चाहिए?'
+                : 'What should Nirpeksh improve or add?'
             }
           />
         </label>
