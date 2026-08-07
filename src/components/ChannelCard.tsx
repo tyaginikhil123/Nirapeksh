@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import type { Channel } from '../data/channels'
 import { useI18n } from '../i18n/I18nContext'
+import { useMediaQuery } from '../lib/media'
 import {
   fetchChannelMeta,
   getAverage,
@@ -44,6 +45,7 @@ export function ChannelCard({
   onToggleBookmark,
 }: ChannelCardProps) {
   const { t } = useI18n()
+  const isDesktop = useMediaQuery('(min-width: 721px)', true)
   const average = getAverage(rating)
   const fallbackAvatar = `https://unavatar.io/youtube/${channel.handle.replace(/^@/, '')}`
   const [avatar, setAvatar] = useState(fallbackAvatar)
@@ -156,7 +158,10 @@ export function ChannelCard({
 
         <p className="channel__blurb">{channel.blurb}</p>
 
-        <div className="channel__videos" aria-label={`Latest videos from ${channel.name}`}>
+        <div
+          className="channel__videos"
+          aria-label={`Latest videos from ${channel.name}`}
+        >
           {videosLoading ? (
             Array.from({ length: 4 }, (_, i) => (
               <div key={i} className="video-chip" aria-hidden="true">
@@ -200,11 +205,14 @@ export function ChannelCard({
           locked={!canRate}
           onUnlock={onRequestLogin}
         />
-        <TrustReviewBlock
-          channelId={channel.id}
-          canWrite={Boolean(canRate)}
-          onRequestLogin={onRequestLogin}
-        />
+        <details className="channel__trust-fold" open={isDesktop || undefined}>
+          <summary>{t('addNote')}</summary>
+          <TrustReviewBlock
+            channelId={channel.id}
+            canWrite={Boolean(canRate)}
+            onRequestLogin={onRequestLogin}
+          />
+        </details>
         <a
           className="channel__cta"
           href={channel.youtubeUrl}

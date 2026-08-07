@@ -32,6 +32,7 @@ const dict = {
     reportUpdated: 'Last refreshed',
     reportCta: 'Want to rate or leave a note?',
     heroTitle: 'Trust scored by people — not by TRP.',
+    pageContains: 'A directory of voices outside prime-time TV.',
     heroLede:
       'A free directory of independent Indian YouTube news channels — ground reports, explainers, and voices outside prime-time TV.',
     heroLede2:
@@ -56,6 +57,9 @@ const dict = {
     bookmark: 'Bookmark',
     bookmarked: 'Bookmarked',
     showBookmarks: 'Bookmarks only',
+    moreFilters: 'More filters',
+    fewerFilters: 'Fewer filters',
+    addNote: 'Add a trust note',
     allLanguages: 'All languages',
     rateThisChannel: 'Rate this channel',
     signInWithGoogle: 'Sign in with Google',
@@ -100,6 +104,7 @@ const dict = {
     reportUpdated: 'आखिरी अपडेट',
     reportCta: 'रेट या नोट लिखना है?',
     heroTitle: 'भरोसा लोगों का — टीआरपी का नहीं।',
+    pageContains: 'प्राइम-टाइम टीवी से बाहर की आवाज़ों की डायरेक्टरी।',
     heroLede:
       'स्वतंत्र भारतीय यूट्यूब समाचार चैनलों की मुफ़्त डायरेक्टरी — ज़मीनी रिपोर्ट, समझाने वाले वीडियो, और प्राइम-टाइम टीवी से बाहर की आवाज़ें।',
     heroLede2:
@@ -124,6 +129,9 @@ const dict = {
     bookmark: 'बुकमार्क',
     bookmarked: 'बुकमार्क किया',
     showBookmarks: 'केवल बुकमार्क',
+    moreFilters: 'और फ़िल्टर',
+    fewerFilters: 'कम फ़िल्टर',
+    addNote: 'ट्रस्ट नोट जोड़ें',
     allLanguages: 'सभी भाषाएँ',
     rateThisChannel: 'इस चैनल को रेट करें',
     signInWithGoogle: 'गूगल से साइन-इन करें',

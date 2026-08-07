@@ -12,6 +12,7 @@ import { AuthControls } from './components/AuthControls'
 import { ChannelCard } from './components/ChannelCard'
 import { DirectoryFilters } from './components/DirectoryFilters'
 import { FeedbackForm } from './components/FeedbackForm'
+import { PaletteChooser } from './components/PaletteChooser'
 import { ReportPage } from './components/ReportPage'
 import {
   allTags,
@@ -222,47 +223,48 @@ export default function App() {
           <span className="brand__mark" aria-hidden="true" />
           Nirpeksh
         </a>
-        <div className="site-header__right">
-          <nav className="site-nav">
+        <nav className="site-nav">
+          <button
+            type="button"
+            className={`nav-link${view === 'home' ? ' is-active' : ''}`}
+            onClick={() => setView('home')}
+          >
+            {t('channels')}
+          </button>
+          <button
+            type="button"
+            className={`nav-link${view === 'report' ? ' is-active' : ''}`}
+            onClick={() => setView('report')}
+          >
+            {t('report')}
+          </button>
+          <button
+            type="button"
+            className={`nav-link${view === 'about' ? ' is-active' : ''}`}
+            onClick={() => setView('about')}
+          >
+            {t('about')}
+          </button>
+          <button
+            type="button"
+            className={`nav-link${view === 'feedback' ? ' is-active' : ''}`}
+            onClick={() => setView('feedback')}
+          >
+            {t('feedback')}
+          </button>
+          {isAdminUser ? (
             <button
               type="button"
-              className={`nav-link${view === 'home' ? ' is-active' : ''}`}
-              onClick={() => setView('home')}
+              className={`nav-link${view === 'admin' ? ' is-active' : ''}`}
+              onClick={() => setView('admin')}
             >
-              {t('channels')}
+              {t('admin')}
             </button>
-            <button
-              type="button"
-              className={`nav-link${view === 'report' ? ' is-active' : ''}`}
-              onClick={() => setView('report')}
-            >
-              {t('report')}
-            </button>
-            <button
-              type="button"
-              className={`nav-link${view === 'about' ? ' is-active' : ''}`}
-              onClick={() => setView('about')}
-            >
-              {t('about')}
-            </button>
-            <button
-              type="button"
-              className={`nav-link${view === 'feedback' ? ' is-active' : ''}`}
-              onClick={() => setView('feedback')}
-            >
-              {t('feedback')}
-            </button>
-            {isAdminUser ? (
-              <button
-                type="button"
-                className={`nav-link${view === 'admin' ? ' is-active' : ''}`}
-                onClick={() => setView('admin')}
-              >
-                {t('admin')}
-              </button>
-            ) : null}
-          </nav>
+          ) : null}
+        </nav>
+        <div className="site-header__actions">
           <div className="toolbar">
+            <PaletteChooser />
             <button type="button" className="auth-btn" onClick={toggleTheme}>
               {theme === 'light' ? t('themeDark') : t('themeLight')}
             </button>
@@ -315,6 +317,7 @@ export default function App() {
                   Nirpeksh
                   <span className="hero__brand-hi">निरपेक्ष</span>
                 </h1>
+                <p className="hero__page-line">{t('pageContains')}</p>
                 <p className="hero__title">{t('heroTitle')}</p>
                 <p className="hero__lede">{t('heroLede')}</p>
                 <p className="hero__lede hero__lede--second">{t('heroLede2')}</p>

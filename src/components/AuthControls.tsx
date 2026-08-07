@@ -104,7 +104,16 @@ export function AuthControls() {
         onClick={() => void handleSignIn()}
       >
         <GoogleMark />
-        <span>{busy ? 'Signing in…' : 'Sign in with Google'}</span>
+        <span className="google-signin__label">
+          {busy ? (
+            'Signing in…'
+          ) : (
+            <>
+              <span className="google-signin__full">Sign in with Google</span>
+              <span className="google-signin__short">Sign in</span>
+            </>
+          )}
+        </span>
       </button>
       {error ? <span className="auth-error">{error}</span> : null}
     </div>

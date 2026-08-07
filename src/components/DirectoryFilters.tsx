@@ -1,3 +1,4 @@
+import { useId, useState } from 'react'
 import type { Focus, Language } from '../data/channels'
 import { FOCUS_OPTIONS } from '../data/channels'
 import { useI18n } from '../i18n/I18nContext'
@@ -40,6 +41,8 @@ export function DirectoryFilters({
   resultCount,
 }: DirectoryFiltersProps) {
   const { t } = useI18n()
+  const moreId = useId()
+  const [moreOpen, setMoreOpen] = useState(false)
   const hasActiveFilters =
     query.trim() !== '' ||
     language !== 'All' ||
@@ -47,37 +50,47 @@ export function DirectoryFilters({
     tag !== 'All' ||
     sort !== 'rating' ||
     bookmarksOnly
+  const hasAdvanced = tag !== 'All' || sort !== 'rating'
 
   return (
-    <div className="filters">
-      <div className="lang-tabs" role="tablist" aria-label={t('language')}>
-        {languages.map((item) => (
-          <button
-            key={item}
-            type="button"
-            role="tab"
-            aria-selected={language === item}
-            className={`lang-tab${language === item ? ' is-active' : ''}`}
-            onClick={() => onLanguageChange(item)}
-          >
-            {item === 'All' ? t('allLanguages') : item}
-          </button>
-        ))}
+    <div className={`filters${moreOpen ? ' is-advanced-open' : ''}`}>
+      <div className="filters__top">
+        <div className="lang-tabs" role="tablist" aria-label={t('language')}>
+          {languages.map((item) => (
+            <button
+              key={item}
+              type="button"
+              role="tab"
+              aria-selected={language === item}
+              className={`lang-tab${language === item ? ' is-active' : ''}`}
+              onClick={() => onLanguageChange(item)}
+            >
+              {item === 'All' ? t('allLanguages') : item}
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          className={`filters__bookmarks${bookmarksOnly ? ' is-active' : ''}`}
+          aria-pressed={bookmarksOnly}
+          onClick={() => onBookmarksOnlyChange(!bookmarksOnly)}
+        >
+          {t('bookmarks')}
+        </button>
       </div>
 
-      <div className="filters__search">
-        <label htmlFor="channel-search">{t('search')}</label>
-        <input
-          id="channel-search"
-          type="search"
-          placeholder={t('searchPlaceholder')}
-          value={query}
-          onChange={(e) => onQueryChange(e.target.value)}
-        />
-      </div>
-
-      <div className="filters__row">
-        <label>
+      <div className="filters__primary">
+        <div className="filters__search">
+          <label htmlFor="channel-search">{t('search')}</label>
+          <input
+            id="channel-search"
+            type="search"
+            placeholder={t('searchPlaceholder')}
+            value={query}
+            onChange={(e) => onQueryChange(e.target.value)}
+          />
+        </div>
+        <label className="filters__focus">
           {t('focus')}
           <select
             value={focus}
@@ -91,7 +104,25 @@ export function DirectoryFilters({
             ))}
           </select>
         </label>
+      </div>
 
+      <div className="filters__mobile-bar">
+        <button
+          type="button"
+          className="filters__more"
+          id={moreId}
+          aria-expanded={moreOpen}
+          onClick={() => setMoreOpen((open) => !open)}
+        >
+          {moreOpen ? t('fewerFilters') : t('moreFilters')}
+          {hasAdvanced && !moreOpen ? ' ·' : ''}
+        </button>
+        <p className="filters__count filters__count--mobile" aria-live="polite">
+          {resultCount}
+        </p>
+      </div>
+
+      <div className="filters__row">
         <label>
           {t('tag')}
           <select
@@ -119,15 +150,7 @@ export function DirectoryFilters({
         </label>
 
         <div className="filters__actions">
-          <label className="filters__check">
-            <input
-              type="checkbox"
-              checked={bookmarksOnly}
-              onChange={(e) => onBookmarksOnlyChange(e.target.checked)}
-            />
-            {t('showBookmarks')}
-          </label>
-          <p className="filters__count" aria-live="polite">
+          <p className="filters__count filters__count--desktop" aria-live="polite">
             {resultCount}
           </p>
           <button
