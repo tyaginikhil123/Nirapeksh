@@ -53,6 +53,11 @@ function readCache(channelId: string): LiveVideo[] | null {
   }
 }
 
+/** Titles from session cache (filled after cards load latest videos). */
+export function getCachedVideoTitles(youtubeChannelId: string): string[] {
+  return readCache(youtubeChannelId)?.map((video) => video.title) ?? []
+}
+
 function writeCache(channelId: string, videos: LiveVideo[]) {
   try {
     sessionStorage.setItem(
@@ -162,4 +167,63 @@ export async function fetchLatestVideos(channelId: string): Promise<LiveVideo[]>
   } finally {
     inflight.delete(channelId)
   }
+}
+
+export type YoutubeSearchResult = LiveVideo & {
+  channelTitle: string
+}
+
+/** Topic / keyword search when the local directory has no matches. */
+export async function searchYoutubeVideos(
+  query: string,
+  maxResults = 8,
+): Promise<YoutubeSearchResult[]> {
+  const key = import.meta.env.VITE_YOUTUBE_API_KEY as string | undefined
+  const q = query.trim()
+  if (!key || !q) return []
+
+  return withLimit(async () => {
+    const url = new URL('https://www.googleapis.com/youtube/v3/search')
+    url.searchParams.set('part', 'snippet')
+    url.searchParams.set('q', q)
+    url.searchParams.set('type', 'video')
+    url.searchParams.set('maxResults', String(maxResults))
+    url.searchParams.set('relevanceLanguage', 'hi')
+    url.searchParams.set('safeSearch', 'moderate')
+    url.searchParams.set('key', key)
+
+    const res = await fetch(url)
+    if (!res.ok) {
+      console.warn('YouTube search error', res.status)
+      return []
+    }
+
+    const data = (await res.json()) as {
+      items?: Array<{
+        id?: { videoId?: string }
+        snippet?: {
+          title?: string
+          channelTitle?: string
+          thumbnails?: { medium?: { url?: string }; high?: { url?: string } }
+        }
+      }>
+    }
+
+    return (data.items ?? [])
+      .map((item) => {
+        const id = item.id?.videoId
+        const title = item.snippet?.title?.trim()
+        if (!id || !title) return null
+        const video = toVideo(id, title)
+        return {
+          ...video,
+          thumbnail:
+            item.snippet?.thumbnails?.medium?.url ||
+            item.snippet?.thumbnails?.high?.url ||
+            video.thumbnail,
+          channelTitle: item.snippet?.channelTitle?.trim() || 'YouTube',
+        }
+      })
+      .filter((item): item is YoutubeSearchResult => Boolean(item))
+  })
 }

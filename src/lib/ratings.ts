@@ -129,21 +129,61 @@ export async function fetchChannelsFromFirestore(): Promise<Channel[]> {
     .sort((a, b) => a.name.localeCompare(b.name))
 }
 
+function assertValidChannel(channel: Channel, index: number) {
+  if (!channel.id?.trim()) {
+    throw new Error(`Channel #${index + 1} is missing an id`)
+  }
+  if (!channel.name?.trim()) {
+    throw new Error(`Channel "${channel.id}" is missing a name`)
+  }
+  if (!channel.channelId?.trim()) {
+    throw new Error(`Channel "${channel.name}" is missing a YouTube channelId`)
+  }
+  if (!Array.isArray(channel.tags)) {
+    throw new Error(`Channel "${channel.name}" tags must be an array`)
+  }
+  if (!Array.isArray(channel.sampleVideos)) {
+    throw new Error(`Channel "${channel.name}" sampleVideos must be an array`)
+  }
+}
+
+/** Upsert channels first, then delete only removed ids (never wipe-then-write). */
 export async function saveChannelsToFirestore(channels: Channel[]): Promise<Channel[]> {
   const user = getCurrentUser()
   if (!user) throw new Error('Sign in with admin account required')
+  if (!Array.isArray(channels) || channels.length === 0) {
+    throw new Error('Channel list cannot be empty')
+  }
+
+  channels.forEach(assertValidChannel)
+
+  const ids = channels.map((channel) => channel.id)
+  if (new Set(ids).size !== ids.length) {
+    throw new Error('Duplicate channel ids in the list')
+  }
 
   const database = getDb()
   const existing = await getDocs(collection(database, 'channels'))
-  const batch = writeBatch(database)
+  const existingIds = new Set(existing.docs.map((item) => item.id))
+  const nextIds = new Set(ids)
 
-  for (const item of existing.docs) {
-    batch.delete(item.ref)
-  }
+  // 1) Write / update all channels first so a failure never leaves an empty catalog.
+  const writeBatchOp = writeBatch(database)
   for (const channel of channels) {
-    batch.set(doc(database, 'channels', channel.id), channel)
+    writeBatchOp.set(doc(database, 'channels', channel.id), channel)
   }
-  await batch.commit()
+  await writeBatchOp.commit()
+
+  // 2) Only then remove channels that were dropped from the draft.
+  const toDelete = [...existingIds].filter((id) => !nextIds.has(id))
+  if (toDelete.length) {
+    const deleteBatchOp = writeBatch(database)
+    for (const id of toDelete) {
+      deleteBatchOp.delete(doc(database, 'channels', id))
+    }
+    await deleteBatchOp.commit()
+  }
+
   return channels
 }
 

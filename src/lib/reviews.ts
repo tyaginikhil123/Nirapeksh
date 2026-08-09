@@ -114,3 +114,38 @@ export async function submitFeedback(input: {
   })
   return { ok: true, stored: true, emailed: false }
 }
+
+export type FeedbackEntry = {
+  id: string
+  name: string
+  email: string
+  message: string
+  createdAt: string
+}
+
+export async function fetchAllFeedback(): Promise<FeedbackEntry[]> {
+  if (!isFirebaseConfigured) return []
+  try {
+    const snap = await getDocs(
+      query(collection(getDb(), 'feedback'), orderBy('createdAt', 'desc')),
+    )
+    return snap.docs.map((item) => {
+      const data = item.data() as Omit<FeedbackEntry, 'id'>
+      return { id: item.id, ...data }
+    })
+  } catch (error) {
+    console.warn('Ordered feedback query failed, falling back', error)
+    try {
+      const snap = await getDocs(collection(getDb(), 'feedback'))
+      return snap.docs
+        .map((item) => {
+          const data = item.data() as Omit<FeedbackEntry, 'id'>
+          return { id: item.id, ...data }
+        })
+        .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
+    } catch (fallbackError) {
+      console.warn('Failed to load feedback', fallbackError)
+      return []
+    }
+  }
+}

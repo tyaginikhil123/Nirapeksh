@@ -14,6 +14,7 @@ import { DirectoryFilters } from './components/DirectoryFilters'
 import { FeedbackForm } from './components/FeedbackForm'
 import { PaletteChooser } from './components/PaletteChooser'
 import { ReportPage } from './components/ReportPage'
+import { VideoPlayerModal } from './components/VideoPlayerModal'
 import {
   allTags,
   channels as seedChannels,
@@ -30,14 +31,24 @@ import {
   submitAuthenticatedRating,
   type RatingState,
 } from './lib/ratings'
+import {
+  navigate,
+  pathToView,
+  readHomeFilters,
+  type AppView,
+} from './lib/routing'
+import { smartSearchChannels, type SearchVideoIndex } from './lib/smartSearch'
+import {
+  fetchLatestVideos,
+  searchYoutubeVideos,
+  type YoutubeSearchResult,
+} from './lib/youtube'
 import { useTheme } from './theme/ThemeContext'
 
 const MAKER_EMAIL = 'kumarnikhil474551@gmail.com'
 const ADMIN_EMAIL = (
   import.meta.env.VITE_ADMIN_EMAIL as string | undefined
 )?.toLowerCase() || MAKER_EMAIL.toLowerCase()
-
-type View = 'home' | 'about' | 'admin' | 'feedback' | 'report'
 
 function emptyRatings(list: Channel[]): Record<string, RatingState> {
   return Object.fromEntries(
@@ -48,25 +59,69 @@ function emptyRatings(list: Channel[]): Record<string, RatingState> {
   )
 }
 
+const initialFilters = readHomeFilters()
+
 export default function App() {
   const { user, configured, loading: authLoading, signIn } = useAuth()
   const { t, lang, setLang } = useI18n()
   const { theme, toggleTheme } = useTheme()
 
-  const [view, setView] = useState<View>('home')
+  const [view, setViewState] = useState<AppView>(() =>
+    pathToView(window.location.pathname),
+  )
   const [channelList, setChannelList] = useState<Channel[]>(seedChannels)
-  const [query, setQuery] = useState('')
-  const [language, setLanguage] = useState<Language | 'All'>('All')
-  const [focus, setFocus] = useState<Focus | 'All'>('All')
-  const [tag, setTag] = useState<string | 'All'>('All')
-  const [sort, setSort] = useState<'rating' | 'name'>('rating')
-  const [bookmarksOnly, setBookmarksOnly] = useState(false)
+  const [query, setQuery] = useState(initialFilters.query)
+  const [language, setLanguage] = useState<Language | 'All'>(initialFilters.language)
+  const [focus, setFocus] = useState<Focus | 'All'>(initialFilters.focus)
+  const [tag, setTag] = useState<string | 'All'>(initialFilters.tag)
+  const [sort, setSort] = useState<'rating' | 'name'>(initialFilters.sort)
+  const [bookmarksOnly, setBookmarksOnly] = useState(initialFilters.bookmarksOnly)
   const [bookmarks, setBookmarks] = useState<string[]>(() => readBookmarks())
   const [ratings, setRatings] = useState(() => emptyRatings(seedChannels))
   const [ratingBusyId, setRatingBusyId] = useState<string | null>(null)
   const [ratingError, setRatingError] = useState('')
+  const [ytResults, setYtResults] = useState<YoutubeSearchResult[]>([])
+  const [ytLoading, setYtLoading] = useState(false)
+  const [ytError, setYtError] = useState('')
+  const [playingYt, setPlayingYt] = useState<YoutubeSearchResult | null>(null)
+  const [videoIndex, setVideoIndex] = useState<SearchVideoIndex>({})
   const [, startTransition] = useTransition()
   const deferredQuery = useDeferredValue(query)
+
+  const homeFilters = useMemo(
+    () => ({ query, language, focus, tag, sort, bookmarksOnly }),
+    [query, language, focus, tag, sort, bookmarksOnly],
+  )
+
+  function setView(next: AppView, replace = false) {
+    setViewState(next)
+    navigate(next, next === 'home' ? homeFilters : undefined, replace)
+  }
+
+  useEffect(() => {
+    function onPopState() {
+      const nextView = pathToView(window.location.pathname)
+      setViewState(nextView)
+      if (nextView === 'home') {
+        const filters = readHomeFilters()
+        startTransition(() => {
+          setQuery(filters.query)
+          setLanguage(filters.language)
+          setFocus(filters.focus)
+          setTag(filters.tag)
+          setSort(filters.sort)
+          setBookmarksOnly(filters.bookmarksOnly)
+        })
+      }
+    }
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [])
+
+  useEffect(() => {
+    if (view !== 'home') return
+    navigate('home', homeFilters, true)
+  }, [view, homeFilters])
 
   useEffect(() => {
     let cancelled = false
@@ -92,42 +147,56 @@ export default function App() {
     }
   }, [user, channelList])
 
+  // Prefetch latest video titles so search can match words like "Jharkhand" on cards.
+  useEffect(() => {
+    let cancelled = false
+
+    async function indexVideos() {
+      const entries = await Promise.all(
+        channelList.map(async (channel) => {
+          try {
+            const videos = await fetchLatestVideos(channel.channelId)
+            return [channel.id, videos.map((video) => video.title)] as const
+          } catch {
+            return [channel.id, [] as string[]] as const
+          }
+        }),
+      )
+      if (!cancelled) {
+        setVideoIndex(Object.fromEntries(entries))
+      }
+    }
+
+    void indexVideos()
+    return () => {
+      cancelled = true
+    }
+  }, [channelList])
+
   const tagOptions = useMemo(() => allTags(channelList), [channelList])
 
   const filtered = useMemo(() => {
-    const q = deferredQuery.trim().toLowerCase()
-
-    const list = channelList.filter((channel) => {
-      const haystack = [
-        channel.name,
-        channel.handle,
-        channel.founder,
-        channel.blurb,
-        channel.focus,
-        ...channel.tags,
-        ...channel.sampleVideos.map((video) => video.title),
-      ]
-        .join(' ')
-        .toLowerCase()
-
-      const matchesQuery = !q || haystack.includes(q)
+    const base = channelList.filter((channel) => {
       const matchesLanguage = language === 'All' || channel.language === language
       const matchesFocus = focus === 'All' || channel.focus === focus
       const matchesTag = tag === 'All' || channel.tags.includes(tag)
       const matchesBookmark = !bookmarksOnly || bookmarks.includes(channel.id)
-
-      return (
-        matchesQuery &&
-        matchesLanguage &&
-        matchesFocus &&
-        matchesTag &&
-        matchesBookmark
-      )
+      return matchesLanguage && matchesFocus && matchesTag && matchesBookmark
     })
 
+    const scored = smartSearchChannels(base, deferredQuery, videoIndex)
+    const list = scored.map((row) => row.channel)
+    const scoreMap = new Map(scored.map((row) => [row.channel.id, row.score]))
+    const hasQuery = Boolean(deferredQuery.trim())
+
     return list.sort((a, b) => {
+      if (hasQuery) {
+        const scoreDiff = (scoreMap.get(b.id) ?? 0) - (scoreMap.get(a.id) ?? 0)
+        if (scoreDiff !== 0) return scoreDiff
+      }
       if (sort === 'name') return a.name.localeCompare(b.name)
-      const diff = getAverage(ratings[b.id] ?? { average: 0, sum: 0, count: 0, userRating: null }) -
+      const diff =
+        getAverage(ratings[b.id] ?? { average: 0, sum: 0, count: 0, userRating: null }) -
         getAverage(ratings[a.id] ?? { average: 0, sum: 0, count: 0, userRating: null })
       if (diff !== 0) return diff
       return a.name.localeCompare(b.name)
@@ -142,7 +211,42 @@ export default function App() {
     channelList,
     bookmarks,
     bookmarksOnly,
+    videoIndex,
   ])
+
+  useEffect(() => {
+    const q = deferredQuery.trim()
+    if (filtered.length > 0 || !q || view !== 'home') {
+      setYtResults([])
+      setYtError('')
+      setYtLoading(false)
+      return
+    }
+
+    let cancelled = false
+    setYtLoading(true)
+    setYtError('')
+    const timer = window.setTimeout(() => {
+      searchYoutubeVideos(q)
+        .then((results) => {
+          if (!cancelled) setYtResults(results)
+        })
+        .catch((err) => {
+          if (!cancelled) {
+            setYtResults([])
+            setYtError(err instanceof Error ? err.message : 'YouTube search failed')
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setYtLoading(false)
+        })
+    }, 400)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [deferredQuery, filtered.length, view])
 
   function refreshFilters() {
     startTransition(() => {
@@ -208,7 +312,7 @@ export default function App() {
 
   useEffect(() => {
     if (view === 'admin' && !isAdminUser) {
-      setView('home')
+      setView('home', true)
     }
   }, [view, isAdminUser])
 
@@ -217,8 +321,11 @@ export default function App() {
       <header className="site-header">
         <a
           className="brand"
-          href="#top"
-          onClick={() => setView('home')}
+          href="/"
+          onClick={(event) => {
+            event.preventDefault()
+            setView('home')
+          }}
         >
           <span className="brand__mark" aria-hidden="true" />
           Nirpeksh
@@ -380,12 +487,42 @@ export default function App() {
               </div>
 
               {filtered.length === 0 && (
-                <p className="directory__empty">
-                  {t('noResults')}{' '}
-                  <button type="button" className="text-btn" onClick={refreshFilters}>
-                    {t('refresh')}
-                  </button>
-                </p>
+                <div className="directory__empty-block">
+                  <p className="directory__empty">
+                    {t('noResults')}{' '}
+                    <button type="button" className="text-btn" onClick={refreshFilters}>
+                      {t('refresh')}
+                    </button>
+                  </p>
+
+                  {deferredQuery.trim() ? (
+                    <section className="yt-search" aria-live="polite">
+                      <h3 className="yt-search__title">{t('ytSearchTitle')}</h3>
+                      <p className="yt-search__lede">{t('ytSearchLede')}</p>
+                      {ytLoading ? <p className="yt-search__status">{t('ytSearchLoading')}</p> : null}
+                      {ytError ? (
+                        <p className="banner-note banner-note--error">{ytError}</p>
+                      ) : null}
+                      {!ytLoading && !ytError && ytResults.length === 0 ? (
+                        <p className="yt-search__status">{t('ytSearchEmpty')}</p>
+                      ) : null}
+                      <div className="yt-search__grid">
+                        {ytResults.map((video) => (
+                          <button
+                            key={video.id}
+                            type="button"
+                            className="yt-search__card"
+                            onClick={() => setPlayingYt(video)}
+                          >
+                            <img src={video.thumbnail} alt="" loading="lazy" />
+                            <span className="yt-search__video-title">{video.title}</span>
+                            <span className="yt-search__channel">{video.channelTitle}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </section>
+                  ) : null}
+                </div>
               )}
             </section>
           </>
@@ -414,6 +551,14 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      {playingYt ? (
+        <VideoPlayerModal
+          videoId={playingYt.id}
+          title={playingYt.title}
+          onClose={() => setPlayingYt(null)}
+        />
+      ) : null}
     </div>
   )
 }

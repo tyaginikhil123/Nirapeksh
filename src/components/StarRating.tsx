@@ -51,11 +51,9 @@ export function StarRating({
 
   const metaText =
     voteCount === 0
-      ? lang === 'hi'
-        ? 'अभी कोई रेटिंग नहीं'
-        : 'No ratings yet'
+      ? t('noPeopleRated')
       : `${voteCount.toLocaleString()} ${
-          lang === 'hi' ? 'रेटिंग' : voteCount === 1 ? 'rating' : 'ratings'
+          voteCount === 1 ? t('person') : t('persons')
         }${
           userRating != null
             ? lang === 'hi'

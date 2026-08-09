@@ -1,23 +1,27 @@
 import { useEffect, useState } from 'react'
+import type { Channel } from '../data/channels'
 import { useI18n } from '../i18n/I18nContext'
 import {
   fetchReviews,
   submitReview,
   type TrustReview,
 } from '../lib/reviews'
+import { draftTrustNote } from '../lib/trustNoteDraft'
 
 type TrustReviewBlockProps = {
-  channelId: string
+  channel: Pick<Channel, 'id' | 'name' | 'focus' | 'tags' | 'language' | 'founder'>
+  userRating: number | null
   canWrite: boolean
   onRequestLogin?: () => void
 }
 
 export function TrustReviewBlock({
-  channelId,
+  channel,
+  userRating,
   canWrite,
   onRequestLogin,
 }: TrustReviewBlockProps) {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const [reviews, setReviews] = useState<TrustReview[]>([])
   const [draft, setDraft] = useState('')
   const [busy, setBusy] = useState(false)
@@ -25,13 +29,13 @@ export function TrustReviewBlock({
 
   useEffect(() => {
     let cancelled = false
-    fetchReviews(channelId).then((list) => {
+    fetchReviews(channel.id).then((list) => {
       if (!cancelled) setReviews(list)
     })
     return () => {
       cancelled = true
     }
-  }, [channelId])
+  }, [channel.id])
 
   async function handleSave() {
     if (!canWrite) {
@@ -41,7 +45,7 @@ export function TrustReviewBlock({
     setBusy(true)
     setError('')
     try {
-      const next = await submitReview(channelId, draft.trim())
+      const next = await submitReview(channel.id, draft.trim())
       setReviews(next)
       if (!draft.trim()) setDraft('')
     } catch (err) {
@@ -49,6 +53,21 @@ export function TrustReviewBlock({
     } finally {
       setBusy(false)
     }
+  }
+
+  function handleDraft() {
+    if (!canWrite) {
+      onRequestLogin?.()
+      return
+    }
+    setDraft(
+      draftTrustNote({
+        channel,
+        userRating,
+        lang,
+      }),
+    )
+    setError('')
   }
 
   return (
@@ -68,6 +87,15 @@ export function TrustReviewBlock({
           <div className="trust-review__actions">
             <button
               type="button"
+              className="trust-review__draft"
+              disabled={busy}
+              onClick={handleDraft}
+              title={t('draftNoteHint')}
+            >
+              {t('draftNote')}
+            </button>
+            <button
+              type="button"
               className="trust-review__save"
               disabled={busy}
               onClick={() => void handleSave()}
@@ -76,6 +104,7 @@ export function TrustReviewBlock({
             </button>
             <span className="trust-review__hint">{draft.length}/280</span>
           </div>
+          <p className="trust-review__draft-hint">{t('draftNoteHint')}</p>
         </>
       ) : (
         <button

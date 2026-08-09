@@ -107,16 +107,26 @@ export function DirectoryFilters({
       </div>
 
       <div className="filters__mobile-bar">
-        <button
-          type="button"
-          className="filters__more"
-          id={moreId}
-          aria-expanded={moreOpen}
-          onClick={() => setMoreOpen((open) => !open)}
-        >
-          {moreOpen ? t('fewerFilters') : t('moreFilters')}
-          {hasAdvanced && !moreOpen ? ' ·' : ''}
-        </button>
+        <div className="filters__mobile-actions">
+          <button
+            type="button"
+            className="filters__more"
+            id={moreId}
+            aria-expanded={moreOpen}
+            onClick={() => setMoreOpen((open) => !open)}
+          >
+            {moreOpen ? t('fewerFilters') : t('moreFilters')}
+            {hasAdvanced && !moreOpen ? ' ·' : ''}
+          </button>
+          <button
+            type="button"
+            className="filters__refresh filters__refresh--mobile"
+            onClick={onRefresh}
+            disabled={!hasActiveFilters}
+          >
+            {t('clearFilters')}
+          </button>
+        </div>
         <p className="filters__count filters__count--mobile" aria-live="polite">
           {resultCount}
         </p>
@@ -159,7 +169,7 @@ export function DirectoryFilters({
             onClick={onRefresh}
             disabled={!hasActiveFilters}
           >
-            {t('refresh')}
+            {t('clearFilters')}
           </button>
         </div>
       </div>

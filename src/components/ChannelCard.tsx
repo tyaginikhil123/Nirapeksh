@@ -11,6 +11,7 @@ import {
 } from '../lib/ratings'
 import { StarRating } from './StarRating'
 import { TrustReviewBlock } from './TrustReviewBlock'
+import { VideoPlayerModal } from './VideoPlayerModal'
 
 type ChannelCardProps = {
   channel: Channel
@@ -52,6 +53,7 @@ export function ChannelCard({
   const [avatarFailed, setAvatarFailed] = useState(false)
   const [liveVideos, setLiveVideos] = useState<LiveVideo[] | null>(null)
   const [videosLoading, setVideosLoading] = useState(true)
+  const [playing, setPlaying] = useState<LiveVideo | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -171,16 +173,15 @@ export function ChannelCard({
             ))
           ) : videos.length > 0 ? (
             videos.map((video) => (
-              <a
+              <button
                 key={video.id + video.title}
+                type="button"
                 className="video-chip"
-                href={video.url}
-                target="_blank"
-                rel="noopener noreferrer"
+                onClick={() => setPlaying(video)}
               >
                 <img src={video.thumbnail} alt="" loading="lazy" />
                 <span>{video.title}</span>
-              </a>
+              </button>
             ))
           ) : (
             <a
@@ -208,7 +209,8 @@ export function ChannelCard({
         <details className="channel__trust-fold" open={isDesktop || undefined}>
           <summary>{t('addNote')}</summary>
           <TrustReviewBlock
-            channelId={channel.id}
+            channel={channel}
+            userRating={rating.userRating}
             canWrite={Boolean(canRate)}
             onRequestLogin={onRequestLogin}
           />
@@ -223,6 +225,14 @@ export function ChannelCard({
           <span aria-hidden="true">→</span>
         </a>
       </div>
+
+      {playing ? (
+        <VideoPlayerModal
+          videoId={playing.id}
+          title={playing.title}
+          onClose={() => setPlaying(null)}
+        />
+      ) : null}
     </motion.article>
   )
 }
