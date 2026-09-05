@@ -30,7 +30,25 @@ service cloud.firestore {
         && request.resource.data.rating is int
         && request.resource.data.rating >= 1
         && request.resource.data.rating <= 5
-        && request.resource.data.uid == uid;
+        && request.resource.data.uid == uid
+        && (
+          !('axes' in request.resource.data)
+          || (
+            request.resource.data.axes.keys().hasOnly(['ground', 'clarity', 'fairness', 'consistency'])
+            && request.resource.data.axes.ground is int
+            && request.resource.data.axes.ground >= 1
+            && request.resource.data.axes.ground <= 5
+            && request.resource.data.axes.clarity is int
+            && request.resource.data.axes.clarity >= 1
+            && request.resource.data.axes.clarity <= 5
+            && request.resource.data.axes.fairness is int
+            && request.resource.data.axes.fairness >= 1
+            && request.resource.data.axes.fairness <= 5
+            && request.resource.data.axes.consistency is int
+            && request.resource.data.axes.consistency >= 1
+            && request.resource.data.axes.consistency <= 5
+          )
+        );
       allow delete: if signedIn() && request.auth.uid == uid;
     }
 

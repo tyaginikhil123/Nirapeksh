@@ -10,6 +10,7 @@ import { AboutPage } from './components/AboutPage'
 import { AdminPanel } from './components/AdminPanel'
 import { AuthControls } from './components/AuthControls'
 import { ChannelCard } from './components/ChannelCard'
+import { ChannelWatchPage } from './components/ChannelWatchPage'
 import { DirectoryFilters } from './components/DirectoryFilters'
 import { FeedbackForm } from './components/FeedbackForm'
 import { PaletteChooser } from './components/PaletteChooser'
@@ -25,22 +26,31 @@ import {
 import { useI18n } from './i18n/I18nContext'
 import { readBookmarks, toggleBookmark } from './lib/bookmarks'
 import {
+  EMPTY_AXES,
   fetchAllRatings,
   getAverage,
   loadChannelsOrSeed,
   submitAuthenticatedRating,
+  type AxisScores,
   type RatingState,
 } from './lib/ratings'
 import {
   navigate,
+  navigateChannel,
+  parseChannelRoute,
   pathToView,
   readHomeFilters,
   type AppView,
+  type ChannelRoute,
 } from './lib/routing'
 import { smartSearchChannels, type SearchVideoIndex } from './lib/smartSearch'
 import {
   fetchLatestVideos,
+  readGuestChannel,
+  rememberGuestChannel,
+  searchYoutubeChannels,
   searchYoutubeVideos,
+  type YoutubeChannelResult,
   type YoutubeSearchResult,
 } from './lib/youtube'
 import { useTheme } from './theme/ThemeContext'
@@ -54,12 +64,74 @@ function emptyRatings(list: Channel[]): Record<string, RatingState> {
   return Object.fromEntries(
     list.map((channel) => [
       channel.id,
-      { sum: 0, count: 0, average: 0, userRating: null },
+      {
+        sum: 0,
+        count: 0,
+        average: 0,
+        userRating: null,
+        axes: { ...EMPTY_AXES },
+        userAxes: null,
+      },
     ]),
   )
 }
 
 const initialFilters = readHomeFilters()
+
+function ChannelWatchBlock({
+  route,
+  channels,
+  onBack,
+}: {
+  route: ChannelRoute | null
+  channels: Channel[]
+  onBack: () => void
+}) {
+  const { t } = useI18n()
+  const listed =
+    (route?.listedId
+      ? channels.find((channel) => channel.id === route.listedId)
+      : undefined) ??
+    (route?.youtubeId
+      ? channels.find((channel) => channel.channelId === route.youtubeId)
+      : undefined)
+  const guest =
+    !listed && route?.youtubeId ? readGuestChannel(route.youtubeId) : null
+  const youtubeChannelId = listed?.channelId ?? route?.youtubeId
+
+  if (!youtubeChannelId) {
+    return (
+      <section className="channel-watch">
+        <button type="button" className="channel-watch__back" onClick={onBack}>
+          ← {t('backToChannels')}
+        </button>
+        <p>{t('watchEmpty')}</p>
+      </section>
+    )
+  }
+
+  return (
+    <ChannelWatchPage
+      listed={listed}
+      guest={guest}
+      youtubeChannelId={youtubeChannelId}
+      youtubeUrl={
+        listed?.youtubeUrl ??
+        guest?.url ??
+        `https://www.youtube.com/channel/${youtubeChannelId}`
+      }
+      name={listed?.name ?? guest?.title ?? 'YouTube'}
+      handle={listed?.handle}
+      blurb={listed?.blurb}
+      avatar={
+        listed
+          ? `https://unavatar.io/youtube/${listed.handle.replace(/^@/, '')}`
+          : guest?.thumbnail
+      }
+      onBack={onBack}
+    />
+  )
+}
 
 export default function App() {
   const { user, configured, loading: authLoading, signIn } = useAuth()
@@ -68,6 +140,9 @@ export default function App() {
 
   const [view, setViewState] = useState<AppView>(() =>
     pathToView(window.location.pathname),
+  )
+  const [channelRoute, setChannelRoute] = useState<ChannelRoute | null>(() =>
+    parseChannelRoute(window.location.pathname),
   )
   const [channelList, setChannelList] = useState<Channel[]>(seedChannels)
   const [query, setQuery] = useState(initialFilters.query)
@@ -81,6 +156,7 @@ export default function App() {
   const [ratingBusyId, setRatingBusyId] = useState<string | null>(null)
   const [ratingError, setRatingError] = useState('')
   const [ytResults, setYtResults] = useState<YoutubeSearchResult[]>([])
+  const [ytChannels, setYtChannels] = useState<YoutubeChannelResult[]>([])
   const [ytLoading, setYtLoading] = useState(false)
   const [ytError, setYtError] = useState('')
   const [playingYt, setPlayingYt] = useState<YoutubeSearchResult | null>(null)
@@ -102,6 +178,7 @@ export default function App() {
     function onPopState() {
       const nextView = pathToView(window.location.pathname)
       setViewState(nextView)
+      setChannelRoute(parseChannelRoute(window.location.pathname))
       if (nextView === 'home') {
         const filters = readHomeFilters()
         startTransition(() => {
@@ -218,6 +295,7 @@ export default function App() {
     const q = deferredQuery.trim()
     if (filtered.length > 0 || !q || view !== 'home') {
       setYtResults([])
+      setYtChannels([])
       setYtError('')
       setYtLoading(false)
       return
@@ -226,13 +304,17 @@ export default function App() {
     let cancelled = false
     setYtLoading(true)
     setYtError('')
+    const listedIds = new Set(channelList.map((channel) => channel.channelId))
     const timer = window.setTimeout(() => {
-      searchYoutubeVideos(q)
-        .then((results) => {
-          if (!cancelled) setYtResults(results)
+      Promise.all([searchYoutubeChannels(q), searchYoutubeVideos(q)])
+        .then(([channels, videos]) => {
+          if (cancelled) return
+          setYtChannels(channels.filter((channel) => !listedIds.has(channel.id)))
+          setYtResults(videos)
         })
         .catch((err) => {
           if (!cancelled) {
+            setYtChannels([])
             setYtResults([])
             setYtError(err instanceof Error ? err.message : 'YouTube search failed')
           }
@@ -246,7 +328,7 @@ export default function App() {
       cancelled = true
       window.clearTimeout(timer)
     }
-  }, [deferredQuery, filtered.length, view])
+  }, [deferredQuery, filtered.length, view, channelList])
 
   function refreshFilters() {
     startTransition(() => {
@@ -284,7 +366,7 @@ export default function App() {
     }
   }
 
-  async function handleRate(channelId: string, value: number) {
+  async function handleRate(channelId: string, value: number | AxisScores) {
     if (!user) {
       await handleRequestLogin()
       return
@@ -304,6 +386,44 @@ export default function App() {
 
   function handleToggleBookmark(channelId: string) {
     setBookmarks(toggleBookmark(channelId))
+  }
+
+  function openListedChannel(channelId: string) {
+    const route = { listedId: channelId }
+    setChannelRoute(route)
+    setViewState('channel')
+    navigateChannel(route)
+    window.scrollTo({ top: 0 })
+  }
+
+  function openGuestChannel(channel: YoutubeChannelResult) {
+    rememberGuestChannel(channel)
+    const listed = channelList.find((item) => item.channelId === channel.id)
+    const route: ChannelRoute = listed
+      ? { listedId: listed.id }
+      : { youtubeId: channel.id }
+    setChannelRoute(route)
+    setViewState('channel')
+    navigateChannel(route)
+    window.scrollTo({ top: 0 })
+  }
+
+  function openChannelFromInsight(channelId: string) {
+    const channel = channelList.find((item) => item.id === channelId)
+    startTransition(() => {
+      setQuery(channel?.name ?? '')
+      setLanguage('All')
+      setFocus('All')
+      setTag('All')
+      setBookmarksOnly(false)
+    })
+    setView('home')
+    window.setTimeout(() => {
+      document.getElementById(`channel-${channelId}`)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      })
+    }, 120)
   }
 
   const isAdminUser = Boolean(
@@ -343,7 +463,8 @@ export default function App() {
             className={`nav-link${view === 'report' ? ' is-active' : ''}`}
             onClick={() => setView('report')}
           >
-            {t('report')}
+            <span className="nav-link__full">{t('report')}</span>
+            <span className="nav-link__short">{t('reportShort')}</span>
           </button>
           <button
             type="button"
@@ -401,9 +522,18 @@ export default function App() {
             channels={channelList}
             ratings={ratings}
             onBrowseChannels={() => setView('home')}
+            onViewChannel={openChannelFromInsight}
+            onWatchChannel={openListedChannel}
           />
         ) : null}
         {view === 'feedback' ? <FeedbackForm /> : null}
+        {view === 'channel' ? (
+          <ChannelWatchBlock
+            route={channelRoute}
+            channels={channelList}
+            onBack={() => setView('home')}
+          />
+        ) : null}
         {view === 'admin' && isAdminUser ? (
           <AdminPanel
             channels={channelList}
@@ -467,12 +597,15 @@ export default function App() {
                   <ChannelCard
                     key={channel.id}
                     channel={channel}
+                    allChannels={channelList}
                     rating={
                       ratings[channel.id] ?? {
                         sum: 0,
                         count: 0,
                         average: 0,
                         userRating: null,
+                        axes: { ...EMPTY_AXES },
+                        userAxes: null,
                       }
                     }
                     index={index}
@@ -482,6 +615,7 @@ export default function App() {
                     onRequestLogin={() => void handleRequestLogin()}
                     bookmarked={bookmarks.includes(channel.id)}
                     onToggleBookmark={handleToggleBookmark}
+                    onOpenChannel={openListedChannel}
                   />
                 ))}
               </div>
@@ -503,23 +637,75 @@ export default function App() {
                       {ytError ? (
                         <p className="banner-note banner-note--error">{ytError}</p>
                       ) : null}
-                      {!ytLoading && !ytError && ytResults.length === 0 ? (
+                      {!ytLoading &&
+                      !ytError &&
+                      ytChannels.length === 0 &&
+                      ytResults.length === 0 ? (
                         <p className="yt-search__status">{t('ytSearchEmpty')}</p>
                       ) : null}
-                      <div className="yt-search__grid">
-                        {ytResults.map((video) => (
-                          <button
-                            key={video.id}
-                            type="button"
-                            className="yt-search__card"
-                            onClick={() => setPlayingYt(video)}
-                          >
-                            <img src={video.thumbnail} alt="" loading="lazy" />
-                            <span className="yt-search__video-title">{video.title}</span>
-                            <span className="yt-search__channel">{video.channelTitle}</span>
-                          </button>
-                        ))}
-                      </div>
+
+                      {ytChannels.length > 0 ? (
+                        <>
+                          <h4 className="yt-search__subtitle">{t('ytChannelTitle')}</h4>
+                          <div className="yt-search__channels">
+                            {ytChannels.map((channel) => (
+                              <button
+                                key={channel.id}
+                                type="button"
+                                className="yt-channel-card"
+                                onClick={() => openGuestChannel(channel)}
+                              >
+                                {channel.thumbnail ? (
+                                  <img
+                                    className="yt-channel-card__avatar"
+                                    src={channel.thumbnail}
+                                    alt=""
+                                    loading="lazy"
+                                  />
+                                ) : (
+                                  <div
+                                    className="yt-channel-card__avatar yt-channel-card__avatar--fallback"
+                                    aria-hidden="true"
+                                  >
+                                    {channel.title.slice(0, 2).toUpperCase()}
+                                  </div>
+                                )}
+                                <div className="yt-channel-card__body">
+                                  <strong className="yt-channel-card__name">{channel.title}</strong>
+                                  <span className="yt-channel-card__badge">{t('notOnNirpeksh')}</span>
+                                  {channel.description ? (
+                                    <p className="yt-channel-card__desc">{channel.description}</p>
+                                  ) : null}
+                                  <span className="yt-channel-card__cta">
+                                    {t('openChannel')}
+                                    <span aria-hidden="true"> →</span>
+                                  </span>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      ) : null}
+
+                      {ytResults.length > 0 ? (
+                        <>
+                          <h4 className="yt-search__subtitle">{t('ytVideosTitle')}</h4>
+                          <div className="yt-search__grid">
+                            {ytResults.map((video) => (
+                              <button
+                                key={video.id}
+                                type="button"
+                                className="yt-search__card"
+                                onClick={() => setPlayingYt(video)}
+                              >
+                                <img src={video.thumbnail} alt="" loading="lazy" />
+                                <span className="yt-search__video-title">{video.title}</span>
+                                <span className="yt-search__channel">{video.channelTitle}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      ) : null}
                     </section>
                   ) : null}
                 </div>

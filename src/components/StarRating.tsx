@@ -1,4 +1,5 @@
 import { useI18n } from '../i18n/I18nContext'
+import { type AxisScores } from '../lib/ratings'
 
 function GoogleMark() {
   return (
@@ -31,7 +32,9 @@ function GoogleMark() {
 type StarRatingProps = {
   value: number
   userRating: number | null
-  onRate: (rating: number) => void
+  axes: AxisScores
+  userAxes: AxisScores | null
+  onRate: (rating: number | AxisScores) => void
   voteCount: number
   disabled?: boolean
   locked?: boolean
@@ -62,6 +65,14 @@ export function StarRating({
             : ''
         }`
 
+  function unlockOr(run: () => void) {
+    if (locked) {
+      onUnlock?.()
+      return
+    }
+    run()
+  }
+
   return (
     <div className={`star-rating${locked ? ' is-locked' : ''}`}>
       <p className="star-rating__label">{t('rateThisChannel')}</p>
@@ -79,19 +90,13 @@ export function StarRating({
               type="button"
               className={`star-rating__star${filled ? ' is-filled' : ''}${isUser ? ' is-user' : ''}`}
               aria-label={
-                locked
-                  ? t('signInWithGoogle')
-                  : `Rate ${star} out of 5`
+                locked ? t('signInWithGoogle') : `Rate ${star} out of 5`
               }
               aria-pressed={userRating === star}
               disabled={disabled}
               onClick={(e) => {
                 e.stopPropagation()
-                if (locked) {
-                  onUnlock?.()
-                  return
-                }
-                onRate(star)
+                unlockOr(() => onRate(star))
               }}
             >
               <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -105,6 +110,7 @@ export function StarRating({
         <strong>{voteCount > 0 ? value.toFixed(1) : '—'}</strong>
         <span>{metaText}</span>
       </div>
+
       {locked && onUnlock ? (
         <button
           type="button"

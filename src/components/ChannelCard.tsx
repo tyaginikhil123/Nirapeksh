@@ -6,23 +6,27 @@ import { useMediaQuery } from '../lib/media'
 import {
   fetchChannelMeta,
   getAverage,
+  type AxisScores,
   type SampleVideo as LiveVideo,
   type RatingState,
 } from '../lib/ratings'
+import { findSimilarChannels } from '../lib/similarChannels'
 import { StarRating } from './StarRating'
 import { TrustReviewBlock } from './TrustReviewBlock'
 import { VideoPlayerModal } from './VideoPlayerModal'
 
 type ChannelCardProps = {
   channel: Channel
+  allChannels: Channel[]
   rating: RatingState
   index: number
-  onRate: (channelId: string, rating: number) => void
+  onRate: (channelId: string, rating: number | AxisScores) => void
   ratingBusy?: boolean
   canRate?: boolean
   onRequestLogin?: () => void
   bookmarked?: boolean
   onToggleBookmark?: (channelId: string) => void
+  onOpenChannel?: (channelId: string) => void
 }
 
 function toLiveVideo(video: { id: string; title: string }): LiveVideo {
@@ -36,6 +40,7 @@ function toLiveVideo(video: { id: string; title: string }): LiveVideo {
 
 export function ChannelCard({
   channel,
+  allChannels,
   rating,
   index,
   onRate,
@@ -44,10 +49,15 @@ export function ChannelCard({
   onRequestLogin,
   bookmarked = false,
   onToggleBookmark,
+  onOpenChannel,
 }: ChannelCardProps) {
   const { t } = useI18n()
   const isDesktop = useMediaQuery('(min-width: 721px)', true)
   const average = getAverage(rating)
+  const similar = useMemo(
+    () => findSimilarChannels(channel, allChannels, 3),
+    [channel, allChannels],
+  )
   const fallbackAvatar = `https://unavatar.io/youtube/${channel.handle.replace(/^@/, '')}`
   const [avatar, setAvatar] = useState(fallbackAvatar)
   const [avatarFailed, setAvatarFailed] = useState(false)
@@ -91,6 +101,7 @@ export function ChannelCard({
   return (
     <motion.article
       className="channel"
+      id={`channel-${channel.id}`}
       initial={{ opacity: 0, y: 18 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-30px' }}
@@ -104,10 +115,12 @@ export function ChannelCard({
         <div className="channel__top">
           <a
             className="channel__avatar-link"
-            href={channel.youtubeUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={`Open ${channel.name} on YouTube`}
+            href={`/channel/${channel.id}`}
+            onClick={(event) => {
+              event.preventDefault()
+              onOpenChannel?.(channel.id)
+            }}
+            aria-label={`${t('openChannel')}: ${channel.name}`}
           >
             {!avatarFailed ? (
               <img
@@ -128,9 +141,11 @@ export function ChannelCard({
             <div className="channel__title-row">
               <h3>
                 <a
-                  href={channel.youtubeUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  href={`/channel/${channel.id}`}
+                  onClick={(event) => {
+                    event.preventDefault()
+                    onOpenChannel?.(channel.id)
+                  }}
                 >
                   {channel.name}
                 </a>
@@ -184,14 +199,13 @@ export function ChannelCard({
               </button>
             ))
           ) : (
-            <a
+            <button
               className="video-chip video-chip--empty"
-              href={channel.youtubeUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+              type="button"
+              onClick={() => onOpenChannel?.(channel.id)}
             >
-              <span>Open channel to browse recent videos on YouTube →</span>
-            </a>
+              <span>{t('openChannel')} →</span>
+            </button>
           )}
         </div>
       </div>
@@ -200,6 +214,8 @@ export function ChannelCard({
         <StarRating
           value={average}
           userRating={rating.userRating}
+          axes={rating.axes}
+          userAxes={rating.userAxes}
           voteCount={rating.count}
           onRate={(value) => onRate(channel.id, value)}
           disabled={ratingBusy}
@@ -215,16 +231,42 @@ export function ChannelCard({
             onRequestLogin={onRequestLogin}
           />
         </details>
-        <a
-          className="channel__cta"
-          href={channel.youtubeUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          {t('openChannel')}
-          <span aria-hidden="true">→</span>
-        </a>
+        <div className="channel__cta-split">
+          <button
+            type="button"
+            className="channel__cta channel__cta--app"
+            onClick={() => onOpenChannel?.(channel.id)}
+          >
+            {t('openChannel')}
+          </button>
+          <a
+            className="channel__cta"
+            href={channel.youtubeUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {t('openOnYoutube')}
+          </a>
+        </div>
       </div>
+
+      {similar.length > 0 ? (
+        <div className="channel__similar">
+          <p className="channel__similar-label">{t('similarChannels')}</p>
+          <div className="channel__similar-list">
+            {similar.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className="channel__similar-chip"
+                onClick={() => onOpenChannel?.(item.id)}
+              >
+                {item.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       {playing ? (
         <VideoPlayerModal

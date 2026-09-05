@@ -10,11 +10,20 @@ import type { Channel } from '../data/channels'
 import { getCurrentUser, getDb, isFirebaseConfigured } from './firebase'
 import { fetchLatestVideos, type LiveVideo } from './youtube'
 
+export const TRUST_AXES = ['ground', 'clarity', 'fairness', 'consistency'] as const
+export type TrustAxis = (typeof TRUST_AXES)[number]
+
+export type AxisScores = Record<TrustAxis, number>
+
 export type RatingState = {
   sum: number
   count: number
   average: number
   userRating: number | null
+  /** Community averages per axis (0 if none). */
+  axes: AxisScores
+  /** Signed-in user's axis scores, if any. */
+  userAxes: AxisScores | null
 }
 
 export type SampleVideo = LiveVideo
@@ -24,27 +33,85 @@ export type ChannelMeta = {
   videos: LiveVideo[]
 }
 
-function emptyState(userRating: number | null = null): RatingState {
-  return { sum: 0, count: 0, average: 0, userRating }
+export const EMPTY_AXES: AxisScores = {
+  ground: 0,
+  clarity: 0,
+  fairness: 0,
+  consistency: 0,
 }
 
-function aggregateVotes(
-  votes: { uid: string; rating: number }[],
-  uid: string | null,
-): RatingState {
+function emptyState(userRating: number | null = null): RatingState {
+  return {
+    sum: 0,
+    count: 0,
+    average: 0,
+    userRating,
+    axes: { ...EMPTY_AXES },
+    userAxes: null,
+  }
+}
+
+function averageOfAxes(axes: AxisScores): number {
+  const values = TRUST_AXES.map((key) => axes[key])
+  const sum = values.reduce((acc, n) => acc + n, 0)
+  return Math.round((sum / values.length) * 10) / 10
+}
+
+function parseAxes(raw: unknown): AxisScores | null {
+  if (!raw || typeof raw !== 'object') return null
+  const data = raw as Record<string, unknown>
+  const next = { ...EMPTY_AXES }
+  for (const key of TRUST_AXES) {
+    const value = Number(data[key])
+    if (!Number.isInteger(value) || value < 1 || value > 5) return null
+    next[key] = value
+  }
+  return next
+}
+
+type VoteRow = {
+  uid: string
+  rating: number
+  axes: AxisScores | null
+}
+
+function aggregateVotes(votes: VoteRow[], uid: string | null): RatingState {
   let sum = 0
   let count = 0
   let userRating: number | null = null
+  let userAxes: AxisScores | null = null
+  const axisSums = { ...EMPTY_AXES }
+  const axisCounts = { ...EMPTY_AXES }
+
   for (const vote of votes) {
     sum += vote.rating
     count += 1
-    if (uid && vote.uid === uid) userRating = vote.rating
+    if (uid && vote.uid === uid) {
+      userRating = vote.rating
+      userAxes = vote.axes
+    }
+    if (vote.axes) {
+      for (const key of TRUST_AXES) {
+        axisSums[key] += vote.axes[key]
+        axisCounts[key] += 1
+      }
+    }
   }
+
+  const axes = { ...EMPTY_AXES }
+  for (const key of TRUST_AXES) {
+    axes[key] = axisCounts[key]
+      ? Math.round((axisSums[key] / axisCounts[key]) * 10) / 10
+      : 0
+  }
+
   return {
     sum,
     count,
     average: count ? Math.round((sum / count) * 10) / 10 : 0,
     userRating,
+    axes,
+    userAxes,
   }
 }
 
@@ -69,10 +136,14 @@ export async function fetchAllRatings(
         const snap = await getDocs(
           collection(getDb(), 'ratings', channelId, 'votes'),
         )
-        const votes = snap.docs.map((item) => ({
-          uid: item.id,
-          rating: Number(item.data().rating) || 0,
-        }))
+        const votes = snap.docs.map((item) => {
+          const data = item.data()
+          return {
+            uid: item.id,
+            rating: Number(data.rating) || 0,
+            axes: parseAxes(data.axes),
+          }
+        })
         next[channelId] = aggregateVotes(votes, uid)
       }),
     )
@@ -85,17 +156,41 @@ export async function fetchAllRatings(
 
 export async function submitAuthenticatedRating(
   channelId: string,
-  rating: number,
+  ratingOrAxes: number | AxisScores,
 ): Promise<RatingState> {
   const user = getCurrentUser()
   if (!user) throw new Error('Sign in required')
-  if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
-    throw new Error('Invalid rating')
+
+  let rating: number
+  let axes: AxisScores | null = null
+
+  if (typeof ratingOrAxes === 'number') {
+    if (!Number.isInteger(ratingOrAxes) || ratingOrAxes < 1 || ratingOrAxes > 5) {
+      throw new Error('Invalid rating')
+    }
+    rating = ratingOrAxes
+    // Quick star: mirror overall onto all axes so multi-axis charts stay filled.
+    axes = {
+      ground: rating,
+      clarity: rating,
+      fairness: rating,
+      consistency: rating,
+    }
+  } else {
+    for (const key of TRUST_AXES) {
+      const value = ratingOrAxes[key]
+      if (!Number.isInteger(value) || value < 1 || value > 5) {
+        throw new Error('Invalid axis rating')
+      }
+    }
+    axes = { ...ratingOrAxes }
+    rating = Math.round(averageOfAxes(axes))
   }
 
   await setDoc(doc(getDb(), 'ratings', channelId, 'votes', user.uid), {
     uid: user.uid,
     rating,
+    axes,
     email: user.email ?? null,
     displayName: user.displayName ?? null,
     photoURL: user.photoURL ?? null,
@@ -103,10 +198,14 @@ export async function submitAuthenticatedRating(
   })
 
   const snap = await getDocs(collection(getDb(), 'ratings', channelId, 'votes'))
-  const votes = snap.docs.map((item) => ({
-    uid: item.id,
-    rating: Number(item.data().rating) || 0,
-  }))
+  const votes = snap.docs.map((item) => {
+    const data = item.data()
+    return {
+      uid: item.id,
+      rating: Number(data.rating) || 0,
+      axes: parseAxes(data.axes),
+    }
+  })
   return aggregateVotes(votes, user.uid)
 }
 
@@ -167,14 +266,12 @@ export async function saveChannelsToFirestore(channels: Channel[]): Promise<Chan
   const existingIds = new Set(existing.docs.map((item) => item.id))
   const nextIds = new Set(ids)
 
-  // 1) Write / update all channels first so a failure never leaves an empty catalog.
   const writeBatchOp = writeBatch(database)
   for (const channel of channels) {
     writeBatchOp.set(doc(database, 'channels', channel.id), channel)
   }
   await writeBatchOp.commit()
 
-  // 2) Only then remove channels that were dropped from the draft.
   const toDelete = [...existingIds].filter((id) => !nextIds.has(id))
   if (toDelete.length) {
     const deleteBatchOp = writeBatch(database)
@@ -187,7 +284,6 @@ export async function saveChannelsToFirestore(channels: Channel[]): Promise<Chan
   return channels
 }
 
-/** Returns Firestore channels when present; otherwise the local seed (no write). */
 export async function loadChannelsOrSeed(seed: Channel[]): Promise<Channel[]> {
   if (!isFirebaseConfigured) return seed
   try {

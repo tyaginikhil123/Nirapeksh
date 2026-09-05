@@ -6,21 +6,28 @@ import {
   fetchAllChannelReviews,
   type ChannelReview,
 } from '../lib/reviews'
+import { ChannelPeekModal, type ChannelPeek } from './ChannelPeekModal'
+import { NirpekshMeter } from './NirpekshMeter'
 
 type ReportPageProps = {
   channels: Channel[]
   ratings: Record<string, RatingState>
   onBrowseChannels: () => void
+  onViewChannel: (channelId: string) => void
+  onWatchChannel: (channelId: string) => void
 }
 
 export function ReportPage({
   channels,
   ratings,
   onBrowseChannels,
+  onViewChannel,
+  onWatchChannel,
 }: ReportPageProps) {
   const { t, lang } = useI18n()
   const [reviews, setReviews] = useState<ChannelReview[]>([])
   const [reviewsLoading, setReviewsLoading] = useState(true)
+  const [peek, setPeek] = useState<ChannelPeek | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -52,16 +59,13 @@ export function ReportPage({
 
   const ranked = [...channels]
     .map((channel) => {
-      const rating = ratings[channel.id] ?? {
-        sum: 0,
-        count: 0,
-        average: 0,
-        userRating: null,
-      }
+      const rating = ratings[channel.id]
       return {
         channel,
-        average: getAverage(rating),
-        count: rating.count,
+        average: getAverage(
+          rating ?? { average: 0, sum: 0, count: 0, userRating: null },
+        ),
+        count: rating?.count ?? 0,
         notes: reviewCountByChannel[channel.id] ?? 0,
       }
     })
@@ -81,9 +85,10 @@ export function ReportPage({
   return (
     <section className="report-page">
       <div className="report-page__intro">
-        <p className="report-page__eyebrow">{t('reportLive')}</p>
-        <h2>{t('reportTitle')}</h2>
+        <p className="report-page__eyebrow">{t('reportTitle')}</p>
+        <h2>{t('meterTitle')}</h2>
         <p>{t('reportLede')}</p>
+        <p className="report-page__hint">{t('meterClickHint')}</p>
         <div className="report-page__stats">
           <div>
             <strong>{channels.length}</strong>
@@ -112,40 +117,46 @@ export function ReportPage({
           const rank = index + 1
           const score = row.count > 0 ? row.average.toFixed(1) : '—'
           return (
-            <li
-              key={row.channel.id}
-              className={`report-board__row${rank <= 3 && row.count > 0 ? ' is-top' : ''}`}
-            >
-              <span className="report-board__rank" aria-label={`Rank ${rank}`}>
-                {rank}
-              </span>
-              <div className="report-board__channel">
-                <a
-                  href={row.channel.youtubeUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {row.channel.name}
-                </a>
-                <p>
-                  {row.channel.handle} · {row.channel.language} · {row.channel.focus}
-                  {row.notes > 0
-                    ? ` · ${row.notes} ${
-                        row.notes === 1 ? t('reportNote') : t('reportNotesShort')
-                      }`
-                    : ''}
-                </p>
-              </div>
-              <div className="report-board__score">
-                <strong>{score}</strong>
-                <span>
-                  {row.count === 0
-                    ? t('reportNoVotes')
-                    : `${row.count.toLocaleString()} ${
-                        row.count === 1 ? t('reportVote') : t('reportVotesShort')
-                      }`}
+            <li key={row.channel.id}>
+              <button
+                type="button"
+                className={`report-board__row${rank <= 3 && row.count > 0 ? ' is-top' : ''}`}
+                aria-label={`${rank}. ${row.channel.name}. ${t('openChannel')}`}
+                onClick={() =>
+                  setPeek({
+                    channel: row.channel,
+                    rank,
+                    average: row.average,
+                    count: row.count,
+                  })
+                }
+              >
+                <span className="report-board__rank" aria-hidden="true">
+                  {rank}
                 </span>
-              </div>
+                <div className="report-board__channel">
+                  <span className="report-board__name">{row.channel.name}</span>
+                  <p>
+                    {row.channel.handle} · {row.channel.language} · {row.channel.focus}
+                    {row.notes > 0
+                      ? ` · ${row.notes} ${
+                          row.notes === 1 ? t('reportNote') : t('reportNotesShort')
+                        }`
+                      : ''}
+                  </p>
+                </div>
+                <NirpekshMeter value={row.average} rated={row.count > 0} size="sm" />
+                <div className="report-board__score">
+                  <strong>{score}</strong>
+                  <span>
+                    {row.count === 0
+                      ? t('reportNoVotes')
+                      : `${row.count.toLocaleString()} ${
+                          row.count === 1 ? t('reportVote') : t('reportVotesShort')
+                        }`}
+                  </span>
+                </div>
+              </button>
             </li>
           )
         })}
@@ -192,6 +203,21 @@ export function ReportPage({
           {t('channels')}
         </button>
       </p>
+
+      {peek ? (
+        <ChannelPeekModal
+          peek={peek}
+          onClose={() => setPeek(null)}
+          onWatchChannel={(channelId) => {
+            setPeek(null)
+            onWatchChannel(channelId)
+          }}
+          onViewChannel={(channelId) => {
+            setPeek(null)
+            onViewChannel(channelId)
+          }}
+        />
+      ) : null}
     </section>
   )
 }

@@ -535,5 +535,34 @@
       "Education"
     ],
     "sampleVideos": []
+  },
+  {
+    "id": "khabargaon",
+    "name": "Khabargaon",
+    "handle": "@Khabargaon",
+    "channelId": "UClhHB0_iXbn8Cc0x5YzcvIg",
+    "youtubeUrl": "https://www.youtube.com/@Khabargaon",
+    "founder": "Dhairya Kant",
+    "blurb": "Noida-based Hindi digital news — ground reports and explainers that turn a complicated country into plain language. खबरों का गांव.",
+    "language": "Hindi",
+    "focus": "Ground report",
+    "subscribersLabel": "1.2M+",
+    "tags": [
+      "Hindi",
+      "Politics",
+      "Ground",
+      "Explainer",
+      "Noida"
+    ],
+    "sampleVideos": [
+      {
+        "id": "AKTykKSshxI",
+        "title": "India से जुड़ी कंपनी और ₹700 करोड़ की Deal! Estonia के Defense Minister को इस्तीफा?"
+      },
+      {
+        "id": "h2Q9VvZt8-Y",
+        "title": "Angad Ravan Samvad: लंका में Angad का अडिग पैर और Ravan का अहंकार"
+      }
+    ]
   }
 ]
