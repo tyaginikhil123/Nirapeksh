@@ -55,8 +55,96 @@ function tokenize(text: string): string[] {
   return n.split(' ').filter((token) => token.length > 1)
 }
 
+/** Filler words that appear in almost every Hindi/English title — never match channels on these. */
+const STOPWORDS = new Set([
+  'a',
+  'an',
+  'the',
+  'and',
+  'or',
+  'of',
+  'on',
+  'in',
+  'to',
+  'for',
+  'is',
+  'are',
+  'was',
+  'were',
+  'by',
+  'with',
+  'from',
+  'at',
+  'as',
+  'it',
+  'this',
+  'that',
+  'be',
+  'ki',
+  'ke',
+  'ka',
+  'ko',
+  'se',
+  'pe',
+  'par',
+  'mein',
+  'me',
+  'mai',
+  'hai',
+  'hain',
+  'aur',
+  'ya',
+  'ye',
+  'wo',
+  'kya',
+  'ek',
+  'do',
+  'bhi',
+  'na',
+  'nahi',
+  'nahin',
+  'की',
+  'के',
+  'का',
+  'को',
+  'से',
+  'पे',
+  'पर',
+  'में',
+  'है',
+  'हैं',
+  'और',
+  'या',
+  'यह',
+  'वो',
+  'क्या',
+  'एक',
+  'भी',
+  'न',
+  'नहीं',
+])
+
+const ALIAS_TOKENS = new Set(
+  Object.keys(TOPIC_ALIASES).flatMap((key) => tokenize(key)),
+)
+
+function keepQueryToken(token: string): boolean {
+  if (STOPWORDS.has(token)) return false
+  if (token.length >= 3) return true
+  return ALIAS_TOKENS.has(token)
+}
+
+/** Distinctive search words (stopwords like "ki" / "pe" dropped). */
+export function significantQueryTokens(query: string): string[] {
+  return tokenize(query).filter(keepQueryToken)
+}
+
+export function significantQueryTokenCount(query: string): number {
+  return significantQueryTokens(query).length
+}
+
 function expandQuery(query: string): Set<string> {
-  const tokens = tokenize(query)
+  const tokens = significantQueryTokens(query)
   const expanded = new Set<string>(tokens)
   const joined = normalize(query)
 
@@ -153,6 +241,10 @@ export function scoreChannel(
 
   const terms = expandQuery(q)
   const videoText = videoHaystack(channel, videoIndex)
+  // Latest titles are noisy; ignore stubs so Hindi filler in titles cannot rank a channel.
+  const videoTerms = new Set(
+    [...terms].filter((term) => term.includes(' ') || term.length >= 4),
+  )
 
   return (
     fieldScore(channel.name, terms, 10) +
@@ -161,7 +253,7 @@ export function scoreChannel(
     fieldScore(channel.focus, terms, 6) +
     fieldScore(channel.tags.join(' '), terms, 7) +
     fieldScore(channel.blurb, terms, 4) +
-    fieldScore(videoText, terms, 8) +
+    fieldScore(videoText, videoTerms, 8) +
     fieldScore(channel.language, terms, 2)
   )
 }

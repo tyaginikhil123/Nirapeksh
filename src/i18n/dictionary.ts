@@ -101,6 +101,9 @@ const dict = {
     notOnNirpeksh: 'Not listed',
     ytSearchLoading: 'Looking up YouTube…',
     ytSearchEmpty: 'No YouTube results for that search.',
+    ytRelatedTitle: 'Related on YouTube',
+    ytRelatedLede:
+      'This looks like a video search. Results below are from YouTube, not Nirpeksh listings.',
     loginNeeded: 'Google login is not configured yet. Add Firebase keys to .env.',
   },
   hi: {
@@ -203,6 +206,9 @@ const dict = {
     notOnNirpeksh: 'सूची में नहीं',
     ytSearchLoading: 'यूट्यूब खोज रहे हैं…',
     ytSearchEmpty: 'इस खोज के लिए यूट्यूब पर कुछ नहीं मिला।',
+    ytRelatedTitle: 'यूट्यूब पर जुड़े नतीजे',
+    ytRelatedLede:
+      'यह वीडियो जैसी खोज लगती है। नीचे यूट्यूब के नतीजे हैं, निरपेक्ष लिस्टिंग नहीं।',
     loginNeeded: 'गूगल लॉगिन अभी सेट नहीं है। .env में Firebase कुंजियाँ जोड़ें।',
   },
 } as const

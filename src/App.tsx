@@ -43,7 +43,11 @@ import {
   type AppView,
   type ChannelRoute,
 } from './lib/routing'
-import { smartSearchChannels, type SearchVideoIndex } from './lib/smartSearch'
+import {
+  significantQueryTokenCount,
+  smartSearchChannels,
+  type SearchVideoIndex,
+} from './lib/smartSearch'
 import {
   fetchLatestVideos,
   readGuestChannel,
@@ -291,9 +295,13 @@ export default function App() {
     videoIndex,
   ])
 
+  const videoLikeQuery = significantQueryTokenCount(deferredQuery) >= 3
+  const showYtSearch =
+    view === 'home' && Boolean(deferredQuery.trim()) && (filtered.length === 0 || videoLikeQuery)
+
   useEffect(() => {
     const q = deferredQuery.trim()
-    if (filtered.length > 0 || !q || view !== 'home') {
+    if (!showYtSearch) {
       setYtResults([])
       setYtChannels([])
       setYtError('')
@@ -328,7 +336,7 @@ export default function App() {
       cancelled = true
       window.clearTimeout(timer)
     }
-  }, [deferredQuery, filtered.length, view, channelList])
+  }, [deferredQuery, showYtSearch, channelList])
 
   function refreshFilters() {
     startTransition(() => {
@@ -620,96 +628,98 @@ export default function App() {
                 ))}
               </div>
 
-              {filtered.length === 0 && (
-                <div className="directory__empty-block">
-                  <p className="directory__empty">
-                    {t('noResults')}{' '}
-                    <button type="button" className="text-btn" onClick={refreshFilters}>
-                      {t('refresh')}
-                    </button>
+              {filtered.length === 0 ? (
+                <p className="directory__empty">
+                  {t('noResults')}{' '}
+                  <button type="button" className="text-btn" onClick={refreshFilters}>
+                    {t('refresh')}
+                  </button>
+                </p>
+              ) : null}
+
+              {showYtSearch ? (
+                <section className="yt-search" aria-live="polite">
+                  <h3 className="yt-search__title">
+                    {filtered.length === 0 ? t('ytSearchTitle') : t('ytRelatedTitle')}
+                  </h3>
+                  <p className="yt-search__lede">
+                    {filtered.length === 0 ? t('ytSearchLede') : t('ytRelatedLede')}
                   </p>
-
-                  {deferredQuery.trim() ? (
-                    <section className="yt-search" aria-live="polite">
-                      <h3 className="yt-search__title">{t('ytSearchTitle')}</h3>
-                      <p className="yt-search__lede">{t('ytSearchLede')}</p>
-                      {ytLoading ? <p className="yt-search__status">{t('ytSearchLoading')}</p> : null}
-                      {ytError ? (
-                        <p className="banner-note banner-note--error">{ytError}</p>
-                      ) : null}
-                      {!ytLoading &&
-                      !ytError &&
-                      ytChannels.length === 0 &&
-                      ytResults.length === 0 ? (
-                        <p className="yt-search__status">{t('ytSearchEmpty')}</p>
-                      ) : null}
-
-                      {ytChannels.length > 0 ? (
-                        <>
-                          <h4 className="yt-search__subtitle">{t('ytChannelTitle')}</h4>
-                          <div className="yt-search__channels">
-                            {ytChannels.map((channel) => (
-                              <button
-                                key={channel.id}
-                                type="button"
-                                className="yt-channel-card"
-                                onClick={() => openGuestChannel(channel)}
-                              >
-                                {channel.thumbnail ? (
-                                  <img
-                                    className="yt-channel-card__avatar"
-                                    src={channel.thumbnail}
-                                    alt=""
-                                    loading="lazy"
-                                  />
-                                ) : (
-                                  <div
-                                    className="yt-channel-card__avatar yt-channel-card__avatar--fallback"
-                                    aria-hidden="true"
-                                  >
-                                    {channel.title.slice(0, 2).toUpperCase()}
-                                  </div>
-                                )}
-                                <div className="yt-channel-card__body">
-                                  <strong className="yt-channel-card__name">{channel.title}</strong>
-                                  <span className="yt-channel-card__badge">{t('notOnNirpeksh')}</span>
-                                  {channel.description ? (
-                                    <p className="yt-channel-card__desc">{channel.description}</p>
-                                  ) : null}
-                                  <span className="yt-channel-card__cta">
-                                    {t('openChannel')}
-                                    <span aria-hidden="true"> →</span>
-                                  </span>
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        </>
-                      ) : null}
-
-                      {ytResults.length > 0 ? (
-                        <>
-                          <h4 className="yt-search__subtitle">{t('ytVideosTitle')}</h4>
-                          <div className="yt-search__grid">
-                            {ytResults.map((video) => (
-                              <button
-                                key={video.id}
-                                type="button"
-                                className="yt-search__card"
-                                onClick={() => setPlayingYt(video)}
-                              >
-                                <img src={video.thumbnail} alt="" loading="lazy" />
-                                <span className="yt-search__video-title">{video.title}</span>
-                                <span className="yt-search__channel">{video.channelTitle}</span>
-                              </button>
-                            ))}
-                          </div>
-                        </>
-                      ) : null}
-                    </section>
+                  {ytLoading ? <p className="yt-search__status">{t('ytSearchLoading')}</p> : null}
+                  {ytError ? (
+                    <p className="banner-note banner-note--error">{ytError}</p>
                   ) : null}
-                </div>
-              )}
+                  {!ytLoading &&
+                  !ytError &&
+                  ytChannels.length === 0 &&
+                  ytResults.length === 0 ? (
+                    <p className="yt-search__status">{t('ytSearchEmpty')}</p>
+                  ) : null}
+
+                  {ytChannels.length > 0 ? (
+                    <>
+                      <h4 className="yt-search__subtitle">{t('ytChannelTitle')}</h4>
+                      <div className="yt-search__channels">
+                        {ytChannels.map((channel) => (
+                          <button
+                            key={channel.id}
+                            type="button"
+                            className="yt-channel-card"
+                            onClick={() => openGuestChannel(channel)}
+                          >
+                            {channel.thumbnail ? (
+                              <img
+                                className="yt-channel-card__avatar"
+                                src={channel.thumbnail}
+                                alt=""
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div
+                                className="yt-channel-card__avatar yt-channel-card__avatar--fallback"
+                                aria-hidden="true"
+                              >
+                                {channel.title.slice(0, 2).toUpperCase()}
+                              </div>
+                            )}
+                            <div className="yt-channel-card__body">
+                              <strong className="yt-channel-card__name">{channel.title}</strong>
+                              <span className="yt-channel-card__badge">{t('notOnNirpeksh')}</span>
+                              {channel.description ? (
+                                <p className="yt-channel-card__desc">{channel.description}</p>
+                              ) : null}
+                              <span className="yt-channel-card__cta">
+                                {t('openChannel')}
+                                <span aria-hidden="true"> →</span>
+                              </span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  ) : null}
+
+                  {ytResults.length > 0 ? (
+                    <>
+                      <h4 className="yt-search__subtitle">{t('ytVideosTitle')}</h4>
+                      <div className="yt-search__grid">
+                        {ytResults.map((video) => (
+                          <button
+                            key={video.id}
+                            type="button"
+                            className="yt-search__card"
+                            onClick={() => setPlayingYt(video)}
+                          >
+                            <img src={video.thumbnail} alt="" loading="lazy" />
+                            <span className="yt-search__video-title">{video.title}</span>
+                            <span className="yt-search__channel">{video.channelTitle}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  ) : null}
+                </section>
+              ) : null}
             </section>
           </>
         ) : null}
