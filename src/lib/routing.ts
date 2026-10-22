@@ -2,7 +2,7 @@ import type { Focus, Language } from '../data/channels'
 
 export type AppView =
   | 'home'
-  | 'about'
+  | 'youtube'
   | 'admin'
   | 'feedback'
   | 'report'
@@ -23,7 +23,7 @@ export type ChannelRoute = {
 }
 
 const VIEW_PATHS: Record<Exclude<AppView, 'home' | 'channel'>, string> = {
-  about: '/about',
+  youtube: '/youtube',
   admin: '/admin',
   feedback: '/feedback',
   report: '/report',
@@ -51,9 +51,17 @@ export function channelToPath(route: ChannelRoute): string {
   return '/'
 }
 
+export function parseYoutubeVideoRoute(pathname: string): { videoId: string } | null {
+  const path = pathname.replace(/\/+$/, '') || '/'
+  const match = path.match(/^\/youtube\/watch\/([^/]+)$/)
+  if (match?.[1]) return { videoId: decodeURIComponent(match[1]) }
+  return null
+}
+
 export function pathToView(pathname: string): AppView {
   const path = pathname.replace(/\/+$/, '') || '/'
-  if (path === '/about') return 'about'
+  if (path === '/about') return 'feedback'
+  if (path === '/youtube' || path.startsWith('/youtube/')) return 'youtube'
   if (path === '/admin') return 'admin'
   if (path === '/feedback') return 'feedback'
   if (path === '/report') return 'report'
@@ -63,7 +71,7 @@ export function pathToView(pathname: string): AppView {
 
 export function viewToPath(view: AppView): string {
   if (view === 'home') return '/'
-  if (view === 'channel') return window.location.pathname
+  if (view === 'channel' || view === 'youtube') return window.location.pathname
   return VIEW_PATHS[view]
 }
 
@@ -108,9 +116,23 @@ function writeUrl(url: string, view: AppView, replace: boolean) {
 
 export function navigate(view: AppView, filters?: HomeFilters, replace = false) {
   if (view === 'channel') return
+  if (view === 'youtube') {
+    writeUrl('/youtube', view, replace)
+    return
+  }
   const path = viewToPath(view)
   const search = view === 'home' && filters ? buildHomeSearch(filters) : ''
   writeUrl(`${path}${search}`, view, replace)
+}
+
+export function navigateYoutubeSearch(query: string, replace = false) {
+  const q = query.trim()
+  const url = q ? `/youtube?q=${encodeURIComponent(q)}` : '/youtube'
+  writeUrl(url, 'youtube', replace)
+}
+
+export function navigateYoutubeWatch(videoId: string, replace = false) {
+  writeUrl(`/youtube/watch/${encodeURIComponent(videoId)}`, 'youtube', replace)
 }
 
 export function navigateChannel(route: ChannelRoute, replace = false) {

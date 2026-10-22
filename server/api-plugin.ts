@@ -457,6 +457,25 @@ function apiMiddleware(): Connect.NextHandleFunction {
         })
       }
 
+      if (url.startsWith('/api/yt-suggest') && req.method === 'GET') {
+        const q =
+          new URL(url, 'http://localhost').searchParams.get('q')?.trim() ?? ''
+        if (q.length < 1) return sendJson(res, 200, { suggestions: [] })
+        const endpoint = new URL('https://suggestqueries.google.com/complete/search')
+        endpoint.searchParams.set('client', 'firefox')
+        endpoint.searchParams.set('ds', 'yt')
+        endpoint.searchParams.set('hl', 'en')
+        endpoint.searchParams.set('gl', 'in')
+        endpoint.searchParams.set('q', q)
+        const upstream = await fetch(endpoint)
+        if (!upstream.ok) return sendJson(res, 200, { suggestions: [] })
+        const data = (await upstream.json()) as unknown
+        const suggestions = Array.isArray(data) && Array.isArray(data[1])
+          ? data[1].map((row) => String(row)).filter(Boolean).slice(0, 12)
+          : []
+        return sendJson(res, 200, { suggestions })
+      }
+
       const metaMatch = url.match(/^\/api\/youtube\/([^/?]+)\/meta/)
       if (metaMatch && req.method === 'GET') {
         const channelId = decodeURIComponent(metaMatch[1])

@@ -12,6 +12,7 @@ type DirectoryFiltersProps = {
   sort: 'rating' | 'name'
   bookmarksOnly: boolean
   onQueryChange: (value: string) => void
+  onSearchSubmit: (value: string) => void
   onLanguageChange: (value: Language | 'All') => void
   onFocusChange: (value: Focus | 'All') => void
   onTagChange: (value: string | 'All') => void
@@ -32,6 +33,7 @@ export function DirectoryFilters({
   sort,
   bookmarksOnly,
   onQueryChange,
+  onSearchSubmit,
   onLanguageChange,
   onFocusChange,
   onTagChange,
@@ -80,16 +82,24 @@ export function DirectoryFilters({
       </div>
 
       <div className="filters__primary">
-        <div className="filters__search">
+        <form
+          className="filters__search"
+          onSubmit={(event) => {
+            event.preventDefault()
+            onSearchSubmit(query)
+          }}
+          autoComplete="off"
+        >
           <label htmlFor="channel-search">{t('search')}</label>
           <input
             id="channel-search"
+            name="nirpeksh-channel-q"
             type="search"
             placeholder={t('searchPlaceholder')}
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
           />
-        </div>
+        </form>
         <label className="filters__focus">
           {t('focus')}
           <select

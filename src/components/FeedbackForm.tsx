@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { AboutPage } from './AboutPage'
 import { useI18n } from '../i18n/I18nContext'
 import { submitFeedback } from '../lib/reviews'
 
@@ -122,6 +123,8 @@ export function FeedbackForm() {
           {status === 'error' ? <p className="feedback__err">{error}</p> : null}
         </div>
       </form>
+
+      <AboutPage />
     </section>
   )
 }

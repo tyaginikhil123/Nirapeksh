@@ -6,7 +6,6 @@ import {
   useTransition,
 } from 'react'
 import { useAuth } from './auth/AuthContext'
-import { AboutPage } from './components/AboutPage'
 import { AdminPanel } from './components/AdminPanel'
 import { AuthControls } from './components/AuthControls'
 import { ChannelCard } from './components/ChannelCard'
@@ -16,6 +15,7 @@ import { FeedbackForm } from './components/FeedbackForm'
 import { PaletteChooser } from './components/PaletteChooser'
 import { ReportPage } from './components/ReportPage'
 import { VideoPlayerModal } from './components/VideoPlayerModal'
+import { YoutubeClonePage } from './components/YoutubeClonePage'
 import {
   allTags,
   channels as seedChannels,
@@ -37,7 +37,10 @@ import {
 import {
   navigate,
   navigateChannel,
+  navigateYoutubeSearch,
+  navigateYoutubeWatch,
   parseChannelRoute,
+  parseYoutubeVideoRoute,
   pathToView,
   readHomeFilters,
   type AppView,
@@ -148,6 +151,13 @@ export default function App() {
   const [channelRoute, setChannelRoute] = useState<ChannelRoute | null>(() =>
     parseChannelRoute(window.location.pathname),
   )
+  const [youtubeVideoId, setYoutubeVideoId] = useState<string | null>(
+    () => parseYoutubeVideoRoute(window.location.pathname)?.videoId ?? null,
+  )
+  const [youtubeQuery, setYoutubeQuery] = useState(
+    () => new URLSearchParams(window.location.search).get('q') ?? '',
+  )
+  const [homeYtQuery, setHomeYtQuery] = useState('')
   const [channelList, setChannelList] = useState<Channel[]>(seedChannels)
   const [query, setQuery] = useState(initialFilters.query)
   const [language, setLanguage] = useState<Language | 'All'>(initialFilters.language)
@@ -174,6 +184,10 @@ export default function App() {
   )
 
   function setView(next: AppView, replace = false) {
+    if (next === 'youtube') {
+      setYoutubeVideoId(null)
+      setYoutubeQuery('')
+    }
     setViewState(next)
     navigate(next, next === 'home' ? homeFilters : undefined, replace)
   }
@@ -183,6 +197,12 @@ export default function App() {
       const nextView = pathToView(window.location.pathname)
       setViewState(nextView)
       setChannelRoute(parseChannelRoute(window.location.pathname))
+      setYoutubeVideoId(
+        parseYoutubeVideoRoute(window.location.pathname)?.videoId ?? null,
+      )
+      if (nextView === 'youtube') {
+        setYoutubeQuery(new URLSearchParams(window.location.search).get('q') ?? '')
+      }
       if (nextView === 'home') {
         const filters = readHomeFilters()
         startTransition(() => {
@@ -197,6 +217,11 @@ export default function App() {
     }
     window.addEventListener('popstate', onPopState)
     return () => window.removeEventListener('popstate', onPopState)
+  }, [])
+
+  useEffect(() => {
+    const path = window.location.pathname.replace(/\/+$/, '') || '/'
+    if (path === '/about') navigate('feedback', undefined, true)
   }, [])
 
   useEffect(() => {
@@ -295,12 +320,14 @@ export default function App() {
     videoIndex,
   ])
 
-  const videoLikeQuery = significantQueryTokenCount(deferredQuery) >= 3
+  const committedYtQuery = homeYtQuery.trim()
+  const videoLikeQuery = significantQueryTokenCount(committedYtQuery) >= 3
   const showYtSearch =
-    view === 'home' && Boolean(deferredQuery.trim()) && (filtered.length === 0 || videoLikeQuery)
+    view === 'home' &&
+    Boolean(committedYtQuery) &&
+    (filtered.length === 0 || videoLikeQuery)
 
   useEffect(() => {
-    const q = deferredQuery.trim()
     if (!showYtSearch) {
       setYtResults([])
       setYtChannels([])
@@ -313,34 +340,35 @@ export default function App() {
     setYtLoading(true)
     setYtError('')
     const listedIds = new Set(channelList.map((channel) => channel.channelId))
-    const timer = window.setTimeout(() => {
-      Promise.all([searchYoutubeChannels(q), searchYoutubeVideos(q)])
-        .then(([channels, videos]) => {
-          if (cancelled) return
-          setYtChannels(channels.filter((channel) => !listedIds.has(channel.id)))
-          setYtResults(videos)
-        })
-        .catch((err) => {
-          if (!cancelled) {
-            setYtChannels([])
-            setYtResults([])
-            setYtError(err instanceof Error ? err.message : 'YouTube search failed')
-          }
-        })
-        .finally(() => {
-          if (!cancelled) setYtLoading(false)
-        })
-    }, 400)
+    Promise.all([
+      searchYoutubeChannels(committedYtQuery),
+      searchYoutubeVideos(committedYtQuery),
+    ])
+      .then(([channels, videos]) => {
+        if (cancelled) return
+        setYtChannels(channels.filter((channel) => !listedIds.has(channel.id)))
+        setYtResults(videos)
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setYtChannels([])
+          setYtResults([])
+          setYtError(err instanceof Error ? err.message : 'YouTube search failed')
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setYtLoading(false)
+      })
 
     return () => {
       cancelled = true
-      window.clearTimeout(timer)
     }
-  }, [deferredQuery, showYtSearch, channelList])
+  }, [committedYtQuery, showYtSearch, channelList])
 
   function refreshFilters() {
     startTransition(() => {
       setQuery('')
+      setHomeYtQuery('')
       setLanguage('All')
       setFocus('All')
       setTag('All')
@@ -476,10 +504,11 @@ export default function App() {
           </button>
           <button
             type="button"
-            className={`nav-link${view === 'about' ? ' is-active' : ''}`}
-            onClick={() => setView('about')}
+            className={`nav-link${view === 'youtube' ? ' is-active' : ''}`}
+            onClick={() => setView('youtube')}
           >
-            {t('about')}
+            <span className="nav-link__full">{t('youtube')}</span>
+            <span className="nav-link__short">{t('youtubeShort')}</span>
           </button>
           <button
             type="button"
@@ -524,7 +553,25 @@ export default function App() {
       </header>
 
       <main id="top">
-        {view === 'about' ? <AboutPage /> : null}
+        {view === 'youtube' ? (
+          <YoutubeClonePage
+            videoId={youtubeVideoId}
+            initialQuery={youtubeQuery}
+            onSearch={(nextQuery) => {
+              setYoutubeQuery(nextQuery)
+              setYoutubeVideoId(null)
+              navigateYoutubeSearch(nextQuery)
+            }}
+            onPlay={(video) => {
+              setYoutubeVideoId(video.id)
+              navigateYoutubeWatch(video.id)
+            }}
+            onBack={() => {
+              setYoutubeVideoId(null)
+              navigateYoutubeSearch(youtubeQuery)
+            }}
+          />
+        ) : null}
         {view === 'report' ? (
           <ReportPage
             channels={channelList}
@@ -590,7 +637,11 @@ export default function App() {
                 tags={tagOptions}
                 sort={sort}
                 bookmarksOnly={bookmarksOnly}
-                onQueryChange={setQuery}
+                onQueryChange={(value) => {
+                  setQuery(value)
+                  if (!value.trim()) setHomeYtQuery('')
+                }}
+                onSearchSubmit={(value) => setHomeYtQuery(value.trim())}
                 onLanguageChange={setLanguage}
                 onFocusChange={setFocus}
                 onTagChange={setTag}

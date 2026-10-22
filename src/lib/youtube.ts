@@ -182,6 +182,7 @@ export async function fetchLatestVideos(
 
 export type YoutubeSearchResult = LiveVideo & {
   channelTitle: string
+  channelId?: string
 }
 
 export type YoutubeChannelResult = {
@@ -193,6 +194,7 @@ export type YoutubeChannelResult = {
 }
 
 const GUEST_PREFIX = 'nirpeksh-guest-channel:'
+const GUEST_VIDEO_PREFIX = 'nirpeksh-guest-video:'
 
 export function rememberGuestChannel(channel: YoutubeChannelResult) {
   try {
@@ -207,6 +209,24 @@ export function readGuestChannel(youtubeId: string): YoutubeChannelResult | null
     const raw = sessionStorage.getItem(GUEST_PREFIX + youtubeId)
     if (!raw) return null
     return JSON.parse(raw) as YoutubeChannelResult
+  } catch {
+    return null
+  }
+}
+
+export function rememberGuestVideo(video: YoutubeSearchResult) {
+  try {
+    sessionStorage.setItem(GUEST_VIDEO_PREFIX + video.id, JSON.stringify(video))
+  } catch {
+    /* ignore quota */
+  }
+}
+
+export function readGuestVideo(videoId: string): YoutubeSearchResult | null {
+  try {
+    const raw = sessionStorage.getItem(GUEST_VIDEO_PREFIX + videoId)
+    if (!raw) return null
+    return JSON.parse(raw) as YoutubeSearchResult
   } catch {
     return null
   }
@@ -277,10 +297,40 @@ export async function searchYoutubeChannels(
   })
 }
 
-/** Topic / keyword search when the local directory has no matches. */
+type YoutubeSearchOptions = {
+  regionCode?: string
+  relevanceLanguage?: string | null
+}
+
+function mapSearchItem(item: {
+  id?: { videoId?: string }
+  snippet?: {
+    title?: string
+    channelTitle?: string
+    channelId?: string
+    thumbnails?: { medium?: { url?: string }; high?: { url?: string } }
+  }
+}): YoutubeSearchResult | null {
+  const id = item.id?.videoId
+  const title = item.snippet?.title?.trim()
+  if (!id || !title) return null
+  const video = toVideo(id, title)
+  return {
+    ...video,
+    thumbnail:
+      item.snippet?.thumbnails?.medium?.url ||
+      item.snippet?.thumbnails?.high?.url ||
+      video.thumbnail,
+    channelTitle: item.snippet?.channelTitle?.trim() || 'YouTube',
+    channelId: item.snippet?.channelId,
+  }
+}
+
+/** Topic / keyword search — same ranking idea as YouTube search by name. */
 export async function searchYoutubeVideos(
   query: string,
   maxResults = 8,
+  options: YoutubeSearchOptions = {},
 ): Promise<YoutubeSearchResult[]> {
   const key = youtubeKey()
   const q = query.trim()
@@ -291,10 +341,16 @@ export async function searchYoutubeVideos(
     url.searchParams.set('part', 'snippet')
     url.searchParams.set('q', q)
     url.searchParams.set('type', 'video')
-    url.searchParams.set('maxResults', String(maxResults))
-    url.searchParams.set('relevanceLanguage', 'hi')
+    url.searchParams.set('maxResults', String(Math.min(maxResults, 50)))
+    url.searchParams.set('regionCode', options.regionCode ?? 'IN')
     url.searchParams.set('safeSearch', 'moderate')
     url.searchParams.set('key', key)
+    if (options.relevanceLanguage !== null) {
+      url.searchParams.set(
+        'relevanceLanguage',
+        options.relevanceLanguage ?? 'hi',
+      )
+    }
 
     const res = await fetch(url)
     if (!res.ok) {
@@ -303,31 +359,148 @@ export async function searchYoutubeVideos(
     }
 
     const data = (await res.json()) as {
+      items?: Array<Parameters<typeof mapSearchItem>[0]>
+    }
+
+    return (data.items ?? [])
+      .map(mapSearchItem)
+      .filter((item): item is YoutubeSearchResult => Boolean(item))
+  })
+}
+
+export async function fetchPopularYoutubeVideos(
+  maxResults = 24,
+): Promise<YoutubeSearchResult[]> {
+  const key = youtubeKey()
+  if (!key) return []
+
+  return withLimit(async () => {
+    const url = new URL('https://www.googleapis.com/youtube/v3/videos')
+    url.searchParams.set('part', 'snippet')
+    url.searchParams.set('chart', 'mostPopular')
+    url.searchParams.set('regionCode', 'IN')
+    url.searchParams.set('maxResults', String(Math.min(maxResults, 50)))
+    url.searchParams.set('key', key)
+
+    const res = await fetch(url)
+    if (!res.ok) {
+      console.warn('YouTube popular videos error', res.status)
+      return []
+    }
+
+    const data = (await res.json()) as {
       items?: Array<{
-        id?: { videoId?: string }
+        id?: string
         snippet?: {
           title?: string
           channelTitle?: string
+          channelId?: string
           thumbnails?: { medium?: { url?: string }; high?: { url?: string } }
         }
       }>
     }
 
     return (data.items ?? [])
-      .map((item) => {
-        const id = item.id?.videoId
-        const title = item.snippet?.title?.trim()
-        if (!id || !title) return null
-        const video = toVideo(id, title)
-        return {
-          ...video,
-          thumbnail:
-            item.snippet?.thumbnails?.medium?.url ||
-            item.snippet?.thumbnails?.high?.url ||
-            video.thumbnail,
-          channelTitle: item.snippet?.channelTitle?.trim() || 'YouTube',
-        }
-      })
+      .map((item) =>
+        mapSearchItem({
+          id: { videoId: item.id },
+          snippet: item.snippet,
+        }),
+      )
       .filter((item): item is YoutubeSearchResult => Boolean(item))
+  })
+}
+
+export async function fetchYoutubeVideo(
+  videoId: string,
+): Promise<YoutubeSearchResult | null> {
+  const key = youtubeKey()
+  const id = videoId.trim()
+  if (!key || !id) return readGuestVideo(id)
+
+  return withLimit(async () => {
+    const url = new URL('https://www.googleapis.com/youtube/v3/videos')
+    url.searchParams.set('part', 'snippet')
+    url.searchParams.set('id', id)
+    url.searchParams.set('key', key)
+
+    const res = await fetch(url)
+    if (!res.ok) return readGuestVideo(id)
+
+    const data = (await res.json()) as {
+      items?: Array<{
+        id?: string
+        snippet?: {
+          title?: string
+          channelTitle?: string
+          channelId?: string
+          thumbnails?: { medium?: { url?: string }; high?: { url?: string } }
+        }
+      }>
+    }
+    const item = data.items?.[0]
+    const mapped = item
+      ? mapSearchItem({ id: { videoId: item.id }, snippet: item.snippet })
+      : null
+    if (mapped) rememberGuestVideo(mapped)
+    return mapped ?? readGuestVideo(id)
+  })
+}
+
+export function hasYoutubeApiKey(): boolean {
+  return Boolean(youtubeKey())
+}
+
+function parseSuggestPayload(payload: unknown): string[] {
+  if (!Array.isArray(payload)) return []
+  const rows = payload[1]
+  if (!Array.isArray(rows)) return []
+  return rows
+    .map((row) => {
+      if (typeof row === 'string') return row
+      if (Array.isArray(row) && typeof row[0] === 'string') return row[0]
+      return ''
+    })
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 12)
+}
+
+/** YouTube-style name suggestions while typing (not a full video search). */
+export async function searchYoutubeSuggestions(query: string): Promise<string[]> {
+  const q = query.trim()
+  if (q.length < 1) return []
+
+  try {
+    const res = await fetch(`/api/yt-suggest?q=${encodeURIComponent(q)}`)
+    if (res.ok) {
+      const data = (await res.json()) as { suggestions?: string[] }
+      if (Array.isArray(data.suggestions) && data.suggestions.length) {
+        return data.suggestions
+      }
+    }
+  } catch {
+    /* static hosting has no local API — fall through to JSONP */
+  }
+
+  return new Promise((resolve) => {
+    const callback = `nirpekshYtSuggest_${Date.now()}_${Math.floor(Math.random() * 1e6)}`
+    const script = document.createElement('script')
+    const timer = window.setTimeout(() => finish([]), 3500)
+
+    function finish(list: string[]) {
+      window.clearTimeout(timer)
+      delete (window as unknown as Record<string, unknown>)[callback]
+      script.remove()
+      resolve(list)
+    }
+
+    ;(window as unknown as Record<string, unknown>)[callback] = (payload: unknown) => {
+      finish(parseSuggestPayload(payload))
+    }
+
+    script.src = `https://suggestqueries.google.com/complete/search?client=youtube&ds=yt&hl=en&gl=in&q=${encodeURIComponent(q)}&callback=${encodeURIComponent(callback)}`
+    script.onerror = () => finish([])
+    document.head.appendChild(script)
   })
 }
