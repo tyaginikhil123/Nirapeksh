@@ -23,5 +23,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "data/channels.json"]
+  "include": ["src", "data/channels.json", "data/reportography-feeds.json"]
 }

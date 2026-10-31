@@ -3,6 +3,7 @@ export type LiveVideo = {
   title: string
   thumbnail: string
   url: string
+  publishedAt?: string
 }
 
 const CACHE_PREFIX = 'nirpeksh-yt-videos:'
@@ -33,12 +34,13 @@ function uploadsPlaylistId(channelId: string): string | null {
   return `UU${channelId.slice(2)}`
 }
 
-function toVideo(id: string, title: string): LiveVideo {
+function toVideo(id: string, title: string, publishedAt?: string): LiveVideo {
   return {
     id,
     title,
     thumbnail: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
     url: `https://www.youtube.com/watch?v=${id}`,
+    publishedAt,
   }
 }
 
@@ -96,6 +98,7 @@ async function fetchViaYoutubeApi(
     items?: Array<{
       snippet?: {
         title?: string
+        publishedAt?: string
         resourceId?: { videoId?: string }
       }
     }>
@@ -108,7 +111,7 @@ async function fetchViaYoutubeApi(
       if (!id || !title || title === 'Private video' || title === 'Deleted video') {
         return null
       }
-      return toVideo(id, title)
+      return toVideo(id, title, item.snippet?.publishedAt)
     })
     .filter((video): video is LiveVideo => Boolean(video))
     .slice(0, limit)
@@ -127,7 +130,12 @@ async function fetchViaRssBridge(
 
   const data = (await res.json()) as {
     status?: string
-    items?: Array<{ title?: string; link?: string; guid?: string }>
+    items?: Array<{
+      title?: string
+      link?: string
+      guid?: string
+      pubDate?: string
+    }>
   }
   if (data.status !== 'ok' || !data.items?.length) return []
 
@@ -138,7 +146,16 @@ async function fetchViaRssBridge(
     const id = fromGuid || fromLink
     const title = item.title?.trim()
     if (!id || !title) continue
-    videos.push(toVideo(id, title))
+    const published = item.pubDate ? new Date(item.pubDate) : null
+    videos.push(
+      toVideo(
+        id,
+        title,
+        published && Number.isFinite(published.getTime())
+          ? published.toISOString()
+          : undefined,
+      ),
+    )
     if (videos.length >= limit) break
   }
   return videos
@@ -320,7 +337,7 @@ function mapSearchItem(item: {
   const id = item.id?.videoId
   const title = item.snippet?.title?.trim()
   if (!id || !title) return null
-  const video = toVideo(id, title)
+  const video = toVideo(id, title, item.snippet?.publishedAt)
   return {
     ...video,
     thumbnail:

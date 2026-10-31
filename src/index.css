@@ -1195,6 +1195,127 @@ html[data-theme='dark'] .report-how {
   color: var(--teal-deep);
 }
 
+.reportography {
+  margin: 0.5rem 0 2.5rem;
+}
+
+.reportography__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0 0 1.25rem;
+}
+
+.reportography__chip {
+  border: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+  background: color-mix(in srgb, var(--paper) 80%, white);
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.reportography__chip.is-active {
+  border-color: transparent;
+  color: #f4faf8;
+  background: linear-gradient(135deg, var(--teal), var(--mint));
+}
+
+.reportography__stack {
+  display: grid;
+  gap: 1.15rem;
+}
+
+.reportography__story {
+  padding: 1.15rem 1.2rem 1.15rem;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--paper) 88%, white);
+  border: 1px solid color-mix(in srgb, var(--ink) 8%, transparent);
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--ink) 6%, transparent);
+}
+
+.reportography__story.is-lead {
+  padding: 1.4rem 1.35rem 1.3rem;
+  margin-bottom: 1.15rem;
+  border-left: 4px solid var(--signal);
+}
+
+html[data-theme='dark'] .reportography__story {
+  background: color-mix(in srgb, var(--paper) 70%, #0b1210);
+}
+
+.reportography__kicker {
+  margin: 0 0 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--signal);
+}
+
+.reportography__story h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.15rem, 2.6vw, 1.7rem);
+  letter-spacing: -0.03em;
+  line-height: 1.28;
+}
+
+.reportography__dek {
+  margin: 0.7rem 0 0;
+  color: var(--ink);
+  font-size: 1.02rem;
+  line-height: 1.65;
+  max-width: 42rem;
+}
+
+.reportography__meta {
+  margin: 0.65rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.reportography__read {
+  display: inline-block;
+  margin-top: 0.7rem;
+  color: var(--teal);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.reportography__also {
+  list-style: none;
+  margin: 0.95rem 0 0;
+  padding: 0.8rem 0 0;
+  border-top: 1px solid color-mix(in srgb, var(--ink) 10%, transparent);
+  display: grid;
+  gap: 0.45rem;
+}
+
+.reportography__also-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.reportography__also a {
+  font-weight: 700;
+  color: var(--teal-deep);
+  margin-right: 0.45rem;
+}
+
+.reportography__also span {
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
 .report-board {
   list-style: none;
   margin: 0;

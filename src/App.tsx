@@ -13,6 +13,7 @@ import { ChannelWatchPage } from './components/ChannelWatchPage'
 import { DirectoryFilters } from './components/DirectoryFilters'
 import { FeedbackForm } from './components/FeedbackForm'
 import { PaletteChooser } from './components/PaletteChooser'
+import { ReportographyPage } from './components/ReportographyPage'
 import { ReportPage } from './components/ReportPage'
 import { VideoPlayerModal } from './components/VideoPlayerModal'
 import { YoutubeClonePage } from './components/YoutubeClonePage'
@@ -496,6 +497,14 @@ export default function App() {
           </button>
           <button
             type="button"
+            className={`nav-link${view === 'reportography' ? ' is-active' : ''}`}
+            onClick={() => setView('reportography')}
+          >
+            <span className="nav-link__full">{t('reportography')}</span>
+            <span className="nav-link__short">{t('reportographyShort')}</span>
+          </button>
+          <button
+            type="button"
             className={`nav-link${view === 'report' ? ' is-active' : ''}`}
             onClick={() => setView('report')}
           >
@@ -572,6 +581,7 @@ export default function App() {
             }}
           />
         ) : null}
+        {view === 'reportography' ? <ReportographyPage /> : null}
         {view === 'report' ? (
           <ReportPage
             channels={channelList}

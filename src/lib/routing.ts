@@ -6,6 +6,7 @@ export type AppView =
   | 'admin'
   | 'feedback'
   | 'report'
+  | 'reportography'
   | 'channel'
 
 export type HomeFilters = {
@@ -27,6 +28,7 @@ const VIEW_PATHS: Record<Exclude<AppView, 'home' | 'channel'>, string> = {
   admin: '/admin',
   feedback: '/feedback',
   report: '/report',
+  reportography: '/reportography',
 }
 
 const LANGUAGES = new Set(['All', 'Hindi', 'English', 'Both'])
@@ -65,6 +67,7 @@ export function pathToView(pathname: string): AppView {
   if (path === '/admin') return 'admin'
   if (path === '/feedback') return 'feedback'
   if (path === '/report') return 'report'
+  if (path === '/reportography' || path === '/brief') return 'reportography'
   if (parseChannelRoute(path)) return 'channel'
   return 'home'
 }

@@ -1,0 +1,107 @@
+[
+  {
+    "source": "Dainik Bhaskar",
+    "language": "Hindi",
+    "url": "https://www.bhaskar.com/rss-v1--category-1061.xml"
+  },
+  {
+    "source": "Dainik Bhaskar",
+    "language": "Hindi",
+    "url": "https://news.google.com/rss/search?q=site:bhaskar.com+when:1d&hl=hi&gl=IN&ceid=IN:hi"
+  },
+  {
+    "source": "Dainik Jagran",
+    "language": "Hindi",
+    "url": "https://www.jagran.com/rss/news/national.xml"
+  },
+  {
+    "source": "Dainik Jagran",
+    "language": "Hindi",
+    "url": "https://news.google.com/rss/search?q=site:jagran.com+when:1d&hl=hi&gl=IN&ceid=IN:hi"
+  },
+  {
+    "source": "Hindustan",
+    "language": "Hindi",
+    "url": "https://www.livehindustan.com/rss/national/rssfeed.xml"
+  },
+  {
+    "source": "Hindustan",
+    "language": "Hindi",
+    "url": "https://news.google.com/rss/search?q=site:livehindustan.com+when:1d&hl=hi&gl=IN&ceid=IN:hi"
+  },
+  {
+    "source": "Jansatta",
+    "language": "Hindi",
+    "url": "https://www.jansatta.com/feed/"
+  },
+  {
+    "source": "The Wire Hindi",
+    "language": "Hindi",
+    "url": "https://thewirehindi.com/feed/"
+  },
+  {
+    "source": "BBC Hindi",
+    "language": "Hindi",
+    "url": "https://feeds.bbci.co.uk/hindi/rss.xml"
+  },
+  {
+    "source": "The Indian Express",
+    "language": "English",
+    "url": "https://indianexpress.com/section/india/feed/"
+  },
+  {
+    "source": "The Indian Express",
+    "language": "English",
+    "url": "https://indianexpress.com/section/express-exclusive/feed/"
+  },
+  {
+    "source": "The Hindu",
+    "language": "English",
+    "url": "https://www.thehindu.com/news/national/feeder/default.rss"
+  },
+  {
+    "source": "Frontline",
+    "language": "English",
+    "url": "https://frontline.thehindu.com/feeder/default.rss"
+  },
+  {
+    "source": "Hindustan Times",
+    "language": "English",
+    "url": "https://www.hindustantimes.com/feeds/rss/india-news/rssfeed.xml"
+  },
+  {
+    "source": "The Wire",
+    "language": "English",
+    "url": "https://thewire.in/feed/"
+  },
+  {
+    "source": "Scroll.in",
+    "language": "English",
+    "url": "https://feeds.feedburner.com/ScrollinArticles.rss"
+  },
+  {
+    "source": "Newslaundry",
+    "language": "English",
+    "url": "https://www.newslaundry.com/feed"
+  },
+  {
+    "source": "The Caravan",
+    "language": "English",
+    "url": "https://caravanmagazine.in/feed"
+  },
+  {
+    "source": "Article 14",
+    "language": "English",
+    "url": "https://article-14.com/feed"
+  },
+  {
+    "source": "The Reporters' Collective",
+    "language": "English",
+    "url": "https://www.reporters-collective.in/rss.xml"
+  },
+  {
+    "source": "The Probe",
+    "language": "English",
+    "url": "https://theprobe.in/feed/"
+  }
+]

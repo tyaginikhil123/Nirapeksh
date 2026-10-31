@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { loadEnv, type Connect, type Plugin } from 'vite'
+import { loadNewspaperReports } from './reportography-feeds'
 
 type VoteMap = Record<string, number>
 
@@ -455,6 +456,11 @@ function apiMiddleware(): Connect.NextHandleFunction {
             : 0,
           userRating: rating,
         })
+      }
+
+      if (url.startsWith('/api/reportography') && req.method === 'GET') {
+        const articles = await loadNewspaperReports()
+        return sendJson(res, 200, { articles })
       }
 
       if (url.startsWith('/api/yt-suggest') && req.method === 'GET') {
