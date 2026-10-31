@@ -448,7 +448,7 @@ export async function searchYoutubeVideos(
   const q = query.trim()
   if (!key || (!q && !options.channelId)) return []
 
-  return withLimit(async () => {
+  const mapped = await withLimit(async () => {
     const url = new URL('https://www.googleapis.com/youtube/v3/search')
     url.searchParams.set('part', 'snippet')
     url.searchParams.set('type', 'video')
@@ -469,18 +469,18 @@ export async function searchYoutubeVideos(
     const res = await fetch(url)
     if (!res.ok) {
       console.warn('YouTube search error', res.status)
-      return []
+      return [] as YoutubeSearchResult[]
     }
 
     const data = (await res.json()) as {
       items?: Array<Parameters<typeof mapSearchItem>[0]>
     }
 
-    const mapped = (data.items ?? [])
+    return (data.items ?? [])
       .map(mapSearchItem)
       .filter((item): item is YoutubeSearchResult => Boolean(item))
-    return hydrateVideoStats(mapped)
   })
+  return hydrateVideoStats(mapped)
 }
 
 export async function fetchPopularYoutubeVideos(
@@ -589,38 +589,44 @@ export function hasYoutubeApiKey(): boolean {
 const TITLE_NOISE =
   /\b(official|lyrics?|lyrical|video|song|songs|audio|full|movie|hd|4k|8k|remix|cover|status|whatsapp|slowed|reverb)\b/gi
 
-function coreTitleTokens(title: string): Set<string> {
-  const cleaned = title
+function significantPhrase(title: string): string {
+  return title
     .toLowerCase()
     .replace(/\(.*?\)/g, ' ')
     .replace(/\[.*?\]/g, ' ')
-    .split(/[|\-–—:]/)[0] ?? title
-  return new Set(
-    cleaned
-      .replace(TITLE_NOISE, ' ')
-      .replace(/[^\p{L}\p{N}\s]/gu, ' ')
-      .split(/\s+/)
-      .map((token) => token.trim())
-      .filter((token) => token.length >= 3),
-  )
+    .split(/[|]/)[0]
+    .replace(TITLE_NOISE, ' ')
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 function isSameTrack(left: string, right: string): boolean {
-  const a = coreTitleTokens(left)
-  const b = coreTitleTokens(right)
-  if (a.size === 0 || b.size === 0) return false
-  let hits = 0
-  for (const token of b) {
-    if (a.has(token)) hits += 1
-  }
-  const overlap = hits / Math.min(a.size, b.size)
-  return hits >= 2 || overlap >= 0.6
+  const a = significantPhrase(left)
+  const b = significantPhrase(right)
+  if (!a || !b) return false
+  if (a === b) return true
+  const [short, long] = a.length <= b.length ? [a, b] : [b, a]
+  if (short.length >= 10 && long.includes(short)) return true
+  const aWords = a.split(' ').filter((word) => word.length >= 4)
+  const bWords = new Set(b.split(' ').filter((word) => word.length >= 4))
+  const distinctive = aWords.filter(
+    (word, index) => index > 0 && bWords.has(word),
+  )
+  return distinctive.length >= 2
 }
 
 function relatedMixQuery(video: YoutubeSearchResult): string {
+  if (/\b(song|songs|official|lyrics?|audio|music)\b/i.test(video.title)) {
+    return 'latest hindi songs'
+  }
+  const words = significantPhrase(video.title)
+    .split(' ')
+    .filter((word) => word.length >= 4)
+    .slice(0, 3)
+  if (words.length >= 2) return words.join(' ')
   const channel = video.channelTitle.replace(/\s*[-|].*$/, '').trim()
-  if (channel) return `${channel} songs`
-  return 'songs'
+  return channel ? `${channel} videos` : 'videos'
 }
 
 /** Up next: other videos from the channel plus a mix — not the same song on every row. */
@@ -628,48 +634,44 @@ export async function fetchRelatedYoutubeVideos(
   video: YoutubeSearchResult,
   limit = 16,
 ): Promise<YoutubeSearchResult[]> {
-  const channelId = video.channelId
-  const [fromChannel, mix] = await Promise.all([
-    channelId
-      ? searchYoutubeVideos('', 24, {
-          channelId,
-          order: 'date',
-          relevanceLanguage: null,
-        })
-      : Promise.resolve([]),
-    searchYoutubeVideos(relatedMixQuery(video), 24, {
-      relevanceLanguage: null,
-    }),
-  ])
-
   const seen = new Set([video.id])
   const related: YoutubeSearchResult[] = []
-  const pooled: YoutubeSearchResult[] = []
-  const maxLen = Math.max(fromChannel.length, mix.length)
-  for (let i = 0; i < maxLen; i += 1) {
-    if (fromChannel[i]) pooled.push(fromChannel[i])
-    if (mix[i]) pooled.push(mix[i])
-  }
 
-  for (const item of pooled) {
-    if (seen.has(item.id)) continue
-    if (isSameTrack(video.title, item.title)) continue
-    seen.add(item.id)
-    related.push(item)
-    if (related.length >= limit) break
-  }
-
-  if (related.length < limit) {
-    const popular = await fetchPopularYoutubeVideos(24)
-    for (const item of popular) {
-      if (seen.has(item.id)) continue
-      if (isSameTrack(video.title, item.title)) continue
+  const take = (items: YoutubeSearchResult[], skipSameTrack: boolean) => {
+    for (const item of items) {
+      if (!item?.id || seen.has(item.id)) continue
+      if (skipSameTrack && isSameTrack(video.title, item.title)) continue
       seen.add(item.id)
       related.push(item)
-      if (related.length >= limit) break
+      if (related.length >= limit) return true
     }
+    return false
   }
 
+  const channelId = video.channelId
+  const [fromChannel, mix, popular] = await Promise.all([
+    channelId
+      ? fetchLatestVideos(channelId, CHANNEL_PAGE_VIDEOS)
+          .then((items) =>
+            hydrateVideoStats(
+              items.map((item) => ({
+                ...item,
+                channelTitle: video.channelTitle,
+                channelId,
+              })),
+            ),
+          )
+          .catch(() => [] as YoutubeSearchResult[])
+      : Promise.resolve([] as YoutubeSearchResult[]),
+    searchYoutubeVideos(relatedMixQuery(video), 16, {
+      relevanceLanguage: null,
+    }).catch(() => [] as YoutubeSearchResult[]),
+    fetchPopularYoutubeVideos(24).catch(() => [] as YoutubeSearchResult[]),
+  ])
+
+  if (take(fromChannel, true)) return related
+  if (take(mix, true)) return related
+  take(popular, false)
   return related
 }
 

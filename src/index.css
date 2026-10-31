@@ -3480,10 +3480,11 @@ html[data-theme='dark'] .yt-home__search-box:has(#yt-suggest-panel) input {
   min-width: 0;
 }
 
-.yt-home__row span {
+.yt-home__row-text {
   display: grid;
   align-content: start;
   gap: 0.2rem;
+  min-width: 0;
 }
 
 .yt-home__row strong {

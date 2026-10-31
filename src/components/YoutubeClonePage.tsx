@@ -35,6 +35,7 @@ export function YoutubeClonePage({
   const [submittedQuery, setSubmittedQuery] = useState(initialQuery.trim())
   const [results, setResults] = useState<YoutubeSearchResult[]>([])
   const [related, setRelated] = useState<YoutubeSearchResult[]>([])
+  const [relatedLoading, setRelatedLoading] = useState(false)
   const [playing, setPlaying] = useState<YoutubeSearchResult | null>(() =>
     videoId ? readGuestVideo(videoId) : null,
   )
@@ -44,6 +45,9 @@ export function YoutubeClonePage({
   const [suggestOpen, setSuggestOpen] = useState(false)
   const [activeSuggest, setActiveSuggest] = useState(-1)
   const configured = hasYoutubeApiKey()
+  const relatedKey = playing
+    ? `${playing.id}:${playing.channelId ?? ''}:${playing.title}`
+    : ''
 
   useEffect(() => {
     setQuery(initialQuery)
@@ -120,19 +124,28 @@ export function YoutubeClonePage({
   }, [query])
 
   useEffect(() => {
-    if (!playing) return
+    if (!playing || !relatedKey) {
+      setRelated([])
+      setRelatedLoading(false)
+      return
+    }
+    const current = playing
     let cancelled = false
-    fetchRelatedYoutubeVideos(playing, 16)
+    setRelatedLoading(true)
+    fetchRelatedYoutubeVideos(current, 16)
       .then((videos) => {
         if (!cancelled) setRelated(videos)
       })
       .catch(() => {
         if (!cancelled) setRelated([])
       })
+      .finally(() => {
+        if (!cancelled) setRelatedLoading(false)
+      })
     return () => {
       cancelled = true
     }
-  }, [playing])
+  }, [relatedKey])
 
   function runSearch(nextQuery: string) {
     const next = nextQuery.trim()
@@ -281,6 +294,9 @@ export function YoutubeClonePage({
           </div>
           <aside className="yt-home__related">
             <h3>{t('youtubeRelated')}</h3>
+            {relatedLoading && related.length === 0 ? (
+              <p className="yt-home__status">{t('ytSearchLoading')}</p>
+            ) : null}
             <div className="yt-home__related-list">
               {related.map((video) => (
                 <VideoRow
@@ -366,7 +382,7 @@ function VideoRow({
           <span className="yt-home__duration">{video.duration}</span>
         ) : null}
       </span>
-      <span>
+      <span className="yt-home__row-text">
         <strong>{video.title}</strong>
         <em>{video.channelTitle}</em>
         {meta ? <em>{meta}</em> : null}
