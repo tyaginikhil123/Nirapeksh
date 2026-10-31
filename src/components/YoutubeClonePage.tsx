@@ -3,7 +3,10 @@ import { useI18n } from '../i18n/I18nContext'
 import './YoutubeClonePage.css'
 import {
   fetchPopularYoutubeVideos,
+  fetchRelatedYoutubeVideos,
   fetchYoutubeVideo,
+  formatPublishedAt,
+  formatViewCount,
   hasYoutubeApiKey,
   readGuestVideo,
   rememberGuestVideo,
@@ -27,7 +30,7 @@ export function YoutubeClonePage({
   onPlay,
   onBack,
 }: YoutubeClonePageProps) {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const [query, setQuery] = useState(initialQuery)
   const [submittedQuery, setSubmittedQuery] = useState(initialQuery.trim())
   const [results, setResults] = useState<YoutubeSearchResult[]>([])
@@ -118,14 +121,10 @@ export function YoutubeClonePage({
 
   useEffect(() => {
     if (!playing) return
-    const seed = playing.title.trim()
-    if (!seed) return
     let cancelled = false
-    searchYoutubeVideos(seed, 16, { relevanceLanguage: null })
+    fetchRelatedYoutubeVideos(playing, 16)
       .then((videos) => {
-        if (!cancelled) {
-          setRelated(videos.filter((video) => video.id !== playing.id))
-        }
+        if (!cancelled) setRelated(videos)
       })
       .catch(() => {
         if (!cancelled) setRelated([])
@@ -264,6 +263,11 @@ export function YoutubeClonePage({
               <>
                 <h2 className="yt-home__title">{playing.title}</h2>
                 <p className="yt-home__channel">{playing.channelTitle}</p>
+                {videoMetaLine(playing, lang, t('viewsLabel')) ? (
+                  <p className="yt-home__meta">
+                    {videoMetaLine(playing, lang, t('viewsLabel'))}
+                  </p>
+                ) : null}
                 <a
                   className="yt-home__external"
                   href={playing.url}
@@ -307,9 +311,19 @@ export function YoutubeClonePage({
                 className="yt-home__card"
                 onClick={() => playVideo(video)}
               >
-                <img src={video.thumbnail} alt="" loading="lazy" />
+                <span className="yt-home__thumb">
+                  <img src={video.thumbnail} alt="" loading="lazy" />
+                  {video.duration ? (
+                    <span className="yt-home__duration">{video.duration}</span>
+                  ) : null}
+                </span>
                 <span className="yt-home__card-title">{video.title}</span>
                 <span className="yt-home__card-channel">{video.channelTitle}</span>
+                {videoMetaLine(video, lang, t('viewsLabel')) ? (
+                  <span className="yt-home__card-meta">
+                    {videoMetaLine(video, lang, t('viewsLabel'))}
+                  </span>
+                ) : null}
               </button>
             ))}
           </div>
@@ -319,6 +333,22 @@ export function YoutubeClonePage({
   )
 }
 
+function videoMetaLine(
+  video: YoutubeSearchResult,
+  lang: 'en' | 'hi',
+  viewsLabel: string,
+): string {
+  const parts: string[] = []
+  if (typeof video.viewCount === 'number' && Number.isFinite(video.viewCount)) {
+    parts.push(`${formatViewCount(video.viewCount)} ${viewsLabel}`)
+  }
+  if (video.publishedAt) {
+    const relative = formatPublishedAt(video.publishedAt, lang)
+    if (relative) parts.push(relative)
+  }
+  return parts.join(' · ')
+}
+
 function VideoRow({
   video,
   onPlay,
@@ -326,12 +356,20 @@ function VideoRow({
   video: YoutubeSearchResult
   onPlay: () => void
 }) {
+  const { t, lang } = useI18n()
+  const meta = videoMetaLine(video, lang, t('viewsLabel'))
   return (
     <button type="button" className="yt-home__row" onClick={onPlay}>
-      <img src={video.thumbnail} alt="" loading="lazy" />
+      <span className="yt-home__thumb">
+        <img src={video.thumbnail} alt="" loading="lazy" />
+        {video.duration ? (
+          <span className="yt-home__duration">{video.duration}</span>
+        ) : null}
+      </span>
       <span>
         <strong>{video.title}</strong>
         <em>{video.channelTitle}</em>
+        {meta ? <em>{meta}</em> : null}
       </span>
     </button>
   )

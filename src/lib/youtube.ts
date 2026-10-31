@@ -183,6 +183,9 @@ export async function fetchLatestVideos(
 export type YoutubeSearchResult = LiveVideo & {
   channelTitle: string
   channelId?: string
+  duration?: string
+  viewCount?: number
+  publishedAt?: string
 }
 
 export type YoutubeChannelResult = {
@@ -300,6 +303,8 @@ export async function searchYoutubeChannels(
 type YoutubeSearchOptions = {
   regionCode?: string
   relevanceLanguage?: string | null
+  channelId?: string
+  order?: 'date' | 'relevance' | 'viewCount'
 }
 
 function mapSearchItem(item: {
@@ -308,6 +313,7 @@ function mapSearchItem(item: {
     title?: string
     channelTitle?: string
     channelId?: string
+    publishedAt?: string
     thumbnails?: { medium?: { url?: string }; high?: { url?: string } }
   }
 }): YoutubeSearchResult | null {
@@ -323,7 +329,113 @@ function mapSearchItem(item: {
       video.thumbnail,
     channelTitle: item.snippet?.channelTitle?.trim() || 'YouTube',
     channelId: item.snippet?.channelId,
+    publishedAt: item.snippet?.publishedAt,
   }
+}
+
+function formatIsoDuration(iso: string): string {
+  const match = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/)
+  if (!match) return ''
+  const hours = Number(match[1] || 0)
+  const minutes = Number(match[2] || 0)
+  const seconds = Number(match[3] || 0)
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+  }
+  return `${minutes}:${String(seconds).padStart(2, '0')}`
+}
+
+export function formatViewCount(count: number): string {
+  if (count >= 1_000_000_000) return `${(count / 1_000_000_000).toFixed(1).replace(/\.0$/, '')}B`
+  if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`
+  if (count >= 1_000) return `${(count / 1_000).toFixed(count >= 10_000 ? 0 : 1).replace(/\.0$/, '')}K`
+  return String(count)
+}
+
+export function formatPublishedAt(iso: string, lang: 'en' | 'hi' = 'en'): string {
+  const then = Date.parse(iso)
+  if (!Number.isFinite(then)) return ''
+  const seconds = Math.max(1, Math.round((Date.now() - then) / 1000))
+  const hi = lang === 'hi'
+  if (seconds < 60) return hi ? 'अभी' : 'just now'
+  const minutes = Math.round(seconds / 60)
+  if (minutes < 60) {
+    return hi ? `${minutes} मिनट पहले` : `${minutes} minute${minutes === 1 ? '' : 's'} ago`
+  }
+  const hours = Math.round(minutes / 60)
+  if (hours < 24) {
+    return hi ? `${hours} घंटे पहले` : `${hours} hour${hours === 1 ? '' : 's'} ago`
+  }
+  const days = Math.round(hours / 24)
+  if (days < 7) {
+    return hi ? `${days} दिन पहले` : `${days} day${days === 1 ? '' : 's'} ago`
+  }
+  const weeks = Math.round(days / 7)
+  if (weeks < 5) {
+    return hi ? `${weeks} सप्ताह पहले` : `${weeks} week${weeks === 1 ? '' : 's'} ago`
+  }
+  const months = Math.round(days / 30)
+  if (months < 12) {
+    return hi ? `${months} माह पहले` : `${months} month${months === 1 ? '' : 's'} ago`
+  }
+  const years = Math.round(days / 365)
+  return hi ? `${years} साल पहले` : `${years} year${years === 1 ? '' : 's'} ago`
+}
+
+async function hydrateVideoStats(
+  videos: YoutubeSearchResult[],
+): Promise<YoutubeSearchResult[]> {
+  const key = youtubeKey()
+  const ids = [...new Set(videos.map((video) => video.id).filter(Boolean))]
+  if (!key || ids.length === 0) return videos
+
+  const stats = new Map<
+    string,
+    { duration?: string; viewCount?: number; publishedAt?: string }
+  >()
+
+  for (let i = 0; i < ids.length; i += 50) {
+    const chunk = ids.slice(i, i + 50)
+    await withLimit(async () => {
+      const url = new URL('https://www.googleapis.com/youtube/v3/videos')
+      url.searchParams.set('part', 'contentDetails,statistics,snippet')
+      url.searchParams.set('id', chunk.join(','))
+      url.searchParams.set('key', key)
+      const res = await fetch(url)
+      if (!res.ok) return
+      const data = (await res.json()) as {
+        items?: Array<{
+          id?: string
+          snippet?: { publishedAt?: string }
+          contentDetails?: { duration?: string }
+          statistics?: { viewCount?: string }
+        }>
+      }
+      for (const item of data.items ?? []) {
+        if (!item.id) continue
+        const duration = item.contentDetails?.duration
+          ? formatIsoDuration(item.contentDetails.duration)
+          : undefined
+        const views = item.statistics?.viewCount
+        stats.set(item.id, {
+          duration,
+          viewCount: views ? Number(views) : undefined,
+          publishedAt: item.snippet?.publishedAt,
+        })
+      }
+    })
+  }
+
+  return videos.map((video) => {
+    const extra = stats.get(video.id)
+    if (!extra) return video
+    return {
+      ...video,
+      duration: extra.duration ?? video.duration,
+      viewCount: extra.viewCount ?? video.viewCount,
+      publishedAt: extra.publishedAt ?? video.publishedAt,
+    }
+  })
 }
 
 /** Topic / keyword search — same ranking idea as YouTube search by name. */
@@ -334,17 +446,19 @@ export async function searchYoutubeVideos(
 ): Promise<YoutubeSearchResult[]> {
   const key = youtubeKey()
   const q = query.trim()
-  if (!key || !q) return []
+  if (!key || (!q && !options.channelId)) return []
 
   return withLimit(async () => {
     const url = new URL('https://www.googleapis.com/youtube/v3/search')
     url.searchParams.set('part', 'snippet')
-    url.searchParams.set('q', q)
     url.searchParams.set('type', 'video')
     url.searchParams.set('maxResults', String(Math.min(maxResults, 50)))
     url.searchParams.set('regionCode', options.regionCode ?? 'IN')
     url.searchParams.set('safeSearch', 'moderate')
     url.searchParams.set('key', key)
+    if (q) url.searchParams.set('q', q)
+    if (options.channelId) url.searchParams.set('channelId', options.channelId)
+    if (options.order) url.searchParams.set('order', options.order)
     if (options.relevanceLanguage !== null) {
       url.searchParams.set(
         'relevanceLanguage',
@@ -362,9 +476,10 @@ export async function searchYoutubeVideos(
       items?: Array<Parameters<typeof mapSearchItem>[0]>
     }
 
-    return (data.items ?? [])
+    const mapped = (data.items ?? [])
       .map(mapSearchItem)
       .filter((item): item is YoutubeSearchResult => Boolean(item))
+    return hydrateVideoStats(mapped)
   })
 }
 
@@ -376,7 +491,7 @@ export async function fetchPopularYoutubeVideos(
 
   return withLimit(async () => {
     const url = new URL('https://www.googleapis.com/youtube/v3/videos')
-    url.searchParams.set('part', 'snippet')
+    url.searchParams.set('part', 'snippet,contentDetails,statistics')
     url.searchParams.set('chart', 'mostPopular')
     url.searchParams.set('regionCode', 'IN')
     url.searchParams.set('maxResults', String(Math.min(maxResults, 50)))
@@ -395,19 +510,30 @@ export async function fetchPopularYoutubeVideos(
           title?: string
           channelTitle?: string
           channelId?: string
+          publishedAt?: string
           thumbnails?: { medium?: { url?: string }; high?: { url?: string } }
         }
+        contentDetails?: { duration?: string }
+        statistics?: { viewCount?: string }
       }>
     }
 
-    return (data.items ?? [])
-      .map((item) =>
-        mapSearchItem({
-          id: { videoId: item.id },
-          snippet: item.snippet,
-        }),
-      )
-      .filter((item): item is YoutubeSearchResult => Boolean(item))
+    const list: YoutubeSearchResult[] = []
+    for (const item of data.items ?? []) {
+      const mapped = mapSearchItem({
+        id: { videoId: item.id },
+        snippet: item.snippet,
+      })
+      if (!mapped) continue
+      if (item.contentDetails?.duration) {
+        mapped.duration = formatIsoDuration(item.contentDetails.duration)
+      }
+      if (item.statistics?.viewCount) {
+        mapped.viewCount = Number(item.statistics.viewCount)
+      }
+      list.push(mapped)
+    }
+    return list
   })
 }
 
@@ -420,7 +546,7 @@ export async function fetchYoutubeVideo(
 
   return withLimit(async () => {
     const url = new URL('https://www.googleapis.com/youtube/v3/videos')
-    url.searchParams.set('part', 'snippet')
+    url.searchParams.set('part', 'snippet,contentDetails,statistics')
     url.searchParams.set('id', id)
     url.searchParams.set('key', key)
 
@@ -434,14 +560,23 @@ export async function fetchYoutubeVideo(
           title?: string
           channelTitle?: string
           channelId?: string
+          publishedAt?: string
           thumbnails?: { medium?: { url?: string }; high?: { url?: string } }
         }
+        contentDetails?: { duration?: string }
+        statistics?: { viewCount?: string }
       }>
     }
     const item = data.items?.[0]
     const mapped = item
       ? mapSearchItem({ id: { videoId: item.id }, snippet: item.snippet })
       : null
+    if (mapped && item?.contentDetails?.duration) {
+      mapped.duration = formatIsoDuration(item.contentDetails.duration)
+    }
+    if (mapped && item?.statistics?.viewCount) {
+      mapped.viewCount = Number(item.statistics.viewCount)
+    }
     if (mapped) rememberGuestVideo(mapped)
     return mapped ?? readGuestVideo(id)
   })
@@ -449,6 +584,93 @@ export async function fetchYoutubeVideo(
 
 export function hasYoutubeApiKey(): boolean {
   return Boolean(youtubeKey())
+}
+
+const TITLE_NOISE =
+  /\b(official|lyrics?|lyrical|video|song|songs|audio|full|movie|hd|4k|8k|remix|cover|status|whatsapp|slowed|reverb)\b/gi
+
+function coreTitleTokens(title: string): Set<string> {
+  const cleaned = title
+    .toLowerCase()
+    .replace(/\(.*?\)/g, ' ')
+    .replace(/\[.*?\]/g, ' ')
+    .split(/[|\-–—:]/)[0] ?? title
+  return new Set(
+    cleaned
+      .replace(TITLE_NOISE, ' ')
+      .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+      .split(/\s+/)
+      .map((token) => token.trim())
+      .filter((token) => token.length >= 3),
+  )
+}
+
+function isSameTrack(left: string, right: string): boolean {
+  const a = coreTitleTokens(left)
+  const b = coreTitleTokens(right)
+  if (a.size === 0 || b.size === 0) return false
+  let hits = 0
+  for (const token of b) {
+    if (a.has(token)) hits += 1
+  }
+  const overlap = hits / Math.min(a.size, b.size)
+  return hits >= 2 || overlap >= 0.6
+}
+
+function relatedMixQuery(video: YoutubeSearchResult): string {
+  const channel = video.channelTitle.replace(/\s*[-|].*$/, '').trim()
+  if (channel) return `${channel} songs`
+  return 'songs'
+}
+
+/** Up next: other videos from the channel plus a mix — not the same song on every row. */
+export async function fetchRelatedYoutubeVideos(
+  video: YoutubeSearchResult,
+  limit = 16,
+): Promise<YoutubeSearchResult[]> {
+  const channelId = video.channelId
+  const [fromChannel, mix] = await Promise.all([
+    channelId
+      ? searchYoutubeVideos('', 24, {
+          channelId,
+          order: 'date',
+          relevanceLanguage: null,
+        })
+      : Promise.resolve([]),
+    searchYoutubeVideos(relatedMixQuery(video), 24, {
+      relevanceLanguage: null,
+    }),
+  ])
+
+  const seen = new Set([video.id])
+  const related: YoutubeSearchResult[] = []
+  const pooled: YoutubeSearchResult[] = []
+  const maxLen = Math.max(fromChannel.length, mix.length)
+  for (let i = 0; i < maxLen; i += 1) {
+    if (fromChannel[i]) pooled.push(fromChannel[i])
+    if (mix[i]) pooled.push(mix[i])
+  }
+
+  for (const item of pooled) {
+    if (seen.has(item.id)) continue
+    if (isSameTrack(video.title, item.title)) continue
+    seen.add(item.id)
+    related.push(item)
+    if (related.length >= limit) break
+  }
+
+  if (related.length < limit) {
+    const popular = await fetchPopularYoutubeVideos(24)
+    for (const item of popular) {
+      if (seen.has(item.id)) continue
+      if (isSameTrack(video.title, item.title)) continue
+      seen.add(item.id)
+      related.push(item)
+      if (related.length >= limit) break
+    }
+  }
+
+  return related
 }
 
 function parseSuggestPayload(payload: unknown): string[] {

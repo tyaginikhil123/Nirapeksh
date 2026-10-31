@@ -95,6 +95,7 @@ const dict = {
     youtubeTrending: 'Trending in India',
     youtubeResults: 'Search results',
     youtubeRelated: 'Up next',
+    viewsLabel: 'views',
     youtubeNoKey:
       'Add VITE_YOUTUBE_API_KEY in .env to search and watch YouTube here.',
     backToYoutube: 'Back to videos',
@@ -210,6 +211,7 @@ const dict = {
     youtubeTrending: 'भारत में ट्रेंडिंग',
     youtubeResults: 'खोज नतीजे',
     youtubeRelated: 'आगे देखें',
+    viewsLabel: 'व्यूज़',
     youtubeNoKey:
       'यहाँ यूट्यूब खोजने और देखने के लिए .env में VITE_YOUTUBE_API_KEY जोड़ें।',
     backToYoutube: 'वीडियो पर वापस',
